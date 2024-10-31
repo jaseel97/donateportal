@@ -1,12 +1,15 @@
 services:
   postgres:
-    image: postgres:14-alpine
+    image: postgis/postgis:14-3.5-alpine
     ports:
       - "5432:5432"
     volumes:
       - ./postgres:/var/lib/postgresql/data
+      - ./init_postgis.sql:/docker-entrypoint-initdb.d/init_postgis.sql
     env_file:
       - ./dev.env
+    networks:
+      - donate-network
 
   django:
     build:
