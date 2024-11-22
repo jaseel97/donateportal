@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+from datetime import timedelta
 import os
 from pathlib import Path
 
@@ -130,3 +131,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 GDAL_LIBRARY_PATH = os.getenv("GDAL_LIBRARY_PATH", "/usr/lib/libgdal.so")
 GEOS_LIBRARY_PATH = os.getenv("GEOS_LIBRARY_PATH", "/usr/lib/libgeos_c.so.1")
+
+AUTH_USER_MODEL = 'api.User'
+
+JWT_SECRET = os.getenv('JWT_SECRET', 'your-fallback-secret-key')
+JWT_EXPIRATION_DAYS = int(os.getenv('JWT_EXPIRATION_DAYS', '1'))
+JWT_EXPIRATION_DELTA = timedelta(days=JWT_EXPIRATION_DAYS)

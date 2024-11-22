@@ -4,11 +4,9 @@ RUN apk update
 RUN apk add --no-cache binutils proj-util gdal postgresql-dev geos
 
 WORKDIR /app
-
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
 COPY . .
 
-# CMD ["sh", "-c", "python manage.py migrate && python manage.py createsuperuser --noinput || true && python manage.py runserver 0.0.0.0:8080"]
 CMD ["sh", "/app/start.sh"]
