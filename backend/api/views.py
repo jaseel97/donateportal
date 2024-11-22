@@ -6,12 +6,171 @@ from django.contrib.gis.measure import Distance
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import authenticate, login, logout
 
-from api.models import Organization, Item
+from .models import Organization, Item
 
 
 def index(request):
     return JsonResponse({'msg': 'API is running'}, status=200)
+
+#------------------------------------------------- Auth Views -------------------------------------------------#
+# @csrf_exempt
+# def signup(request):
+#     if request.method != 'POST':
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+#     data = json.loads(request.body)
+#     email = data.get('email')
+#     password = data.get('password')
+    
+#     if not email or not password:
+#         return JsonResponse({'error': 'Email and password are required'}, status=400)
+    
+#     if User.objects.filter(email=email).exists():
+#         return JsonResponse({'error': 'A user with this email already exists'}, status=400)
+        
+#     try:
+#         user = User.objects.create_user(
+#             username=email,
+#             email=email,
+#             password=password
+#         )
+#         token = generate_jwt_token(user)
+#         return JsonResponse({
+#             'token': token
+#         })
+#     except Exception as e:
+#         print(f"Error during user creation: {str(e)}")
+#         return JsonResponse({'error': 'Failed to create user account'}, status=400)
+
+# @csrf_exempt
+# def login_view(request):
+#     if request.method != 'POST':
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+#     data = json.loads(request.body)
+#     email = data.get('email')
+#     password = data.get('password')
+    
+#     user = authenticate(username=email, password=password)
+#     if user is not None:
+#         token = generate_jwt_token(user)
+        
+#         response = JsonResponse({
+#             'message': 'Login successful',
+#         })
+        
+#         response.set_cookie(
+#             key='jwt',
+#             value=token,
+#             httponly=True,
+#             secure=False,  # false since HTTPS terminates at nginx
+#             samesite='Lax',  
+#             max_age=24 * 60 * 60  # 24 hours in seconds
+#         )
+        
+#         return response
+#     else:
+#         return JsonResponse({'error': 'Invalid credentials'}, status=401)
+
+# @token_required
+# @csrf_exempt
+# def logout_view(request):
+#     if request.method != 'POST':
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+#     response = JsonResponse({'message': 'Successfully logged out'})
+#     # Delete the JWT cookie with the same parameters as when it was set
+#     response.delete_cookie(
+#         key='jwt'
+#     )
+
+#     return response
+
+# @token_required
+# def change_password(request):
+#     if request.method != 'POST':
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+        
+#     data = json.loads(request.body)
+#     old_password = data.get('old_password')
+#     new_password = data.get('new_password')
+    
+#     try:
+#         user = User.objects.get(id=request.user_id)
+#         if user.check_password(old_password):
+#             user.set_password(new_password)
+#             user.save()
+#             return JsonResponse({'message': 'Password successfully changed'})
+#         else:
+#             return JsonResponse({'error': 'Current password is incorrect'}, status=400)
+#     except User.DoesNotExist:
+#         return JsonResponse({'error': 'User not found'}, status=404)
+
+# @token_required
+# def get_user_profile(request):
+#     if request.method != 'GET':
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+#     return JsonResponse({
+#         'email': request.user_email,
+#         'is_admin': request.is_admin
+#     })
+
+# @csrf_exempt
+# def request_password_reset(request):
+#     if request.method != 'POST':
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+#     data = json.loads(request.body)
+#     email = data.get('email')
+    
+#     try:
+#         user = User.objects.get(email=email)
+#         token = default_token_generator.make_token(user)
+#         uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+#         reset_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/reset-password/{uid}/{token}"
+#         send_mail(
+#             'Password Reset Request',
+#             f'Click the following link to reset your password: {reset_url}',
+#             settings.DEFAULT_FROM_EMAIL,
+#             [email],
+#             fail_silently=False,
+#         )
+#         return JsonResponse({'message': 'Password reset email sent'})
+#     except User.DoesNotExist:
+#         return JsonResponse({'error': 'User not found'}, status=404)
+
+# @csrf_exempt
+# def reset_password(request):
+#     if request.method != 'POST':
+#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+#     data = json.loads(request.body)
+#     password = data.get('password')
+#     token = data.get('token')
+#     uidb64 = data.get('uid')
+    
+#     try:
+#         uid = force_str(urlsafe_base64_decode(uidb64))
+#         user = User.objects.get(pk=uid)
+        
+#         if default_token_generator.check_token(user, token):
+#             user.set_password(password)
+#             user.save()
+#             return JsonResponse({'message': 'Password successfully reset'})
+#         else:
+#             return JsonResponse({'error': 'Invalid reset link'}, status=400)
+#     except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+#         return JsonResponse({'error': 'Invalid reset link'}, status=400)
+
+
+
+
+#------------------------------------------------- App Views -------------------------------------------------#
 
 
 class ItemView(View):
