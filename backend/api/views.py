@@ -1,5 +1,6 @@
 import os
 import json
+import re
 
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import Distance
@@ -9,85 +10,241 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
 
-from .models import Organization, Item
+from api.jwt import generate_jwt_token, token_required
+from api.validation import validate_organization_data, validate_samaritan_data
+
+from .models import Organization, Item, Samaritan
+from .constants import user_type_organization, user_type_samaritan
 
 
 def index(request):
     return JsonResponse({'msg': 'API is running'}, status=200)
 
 #------------------------------------------------- Auth Views -------------------------------------------------#
-# @csrf_exempt
-# def signup(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+@csrf_exempt
+def signup_organization(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
     
-#     data = json.loads(request.body)
-#     email = data.get('email')
-#     password = data.get('password')
-    
-#     if not email or not password:
-#         return JsonResponse({'error': 'Email and password are required'}, status=400)
-    
-#     if User.objects.filter(email=email).exists():
-#         return JsonResponse({'error': 'A user with this email already exists'}, status=400)
+    try:
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
         
-#     try:
-#         user = User.objects.create_user(
-#             username=email,
-#             email=email,
-#             password=password
-#         )
-#         token = generate_jwt_token(user)
-#         return JsonResponse({
-#             'token': token
-#         })
-#     except Exception as e:
-#         print(f"Error during user creation: {str(e)}")
-#         return JsonResponse({'error': 'Failed to create user account'}, status=400)
+        is_valid, error_message = validate_organization_data(data)
+        
+        print("Validation Complete!")
+        
+        if not is_valid:
+            return JsonResponse({'error': error_message}, status=400)
+        
+        # Extract nested data
+        location_data = data.pop('location')
+        point = Point(location_data['longitude'], location_data['latitude'])
+        address_data = data.pop('address')
+        
+        # Create user data dictionary
+        user_data = {
+            'username': data.get('username'),
+            'email': data.get('email'),
+            'password': data.get('password'),
+            'is_staff':False
+        }
+        
+        # Create organization-specific data dictionary
+        org_data = {
+            'name': data.get('name'),
+            'location': point,
+            'address_line1': address_data.get('address_line1'),
+            'address_line2': address_data.get('address_line2'),
+            'city': address_data.get('city'),
+            'province': address_data.get('province'),
+            'postal_code': address_data.get('postal_code'),
+        }
+        
+        # Create the organization user
+        organization = Organization.objects.create(
+            **user_data,
+            **org_data
+        )
+        
+        # Set password properly
+        organization.set_password(user_data['password'])
+        organization.save()
+        
+        print("Testing...")
+        print(organization.username)
+        
+        token = generate_jwt_token({
+            'username': organization.username,
+            'email': organization.email,
+            'is_staff': False,
+            'user_type': organization.user_type,
+        })
+        
+        response = JsonResponse({
+            'message': 'Sign up is successful',
+        })
+        
+        response.set_cookie(
+            key='jwt',
+            value=token,
+            httponly=True,
+            secure=False,
+            samesite='Lax',
+            max_age=24 * 60 * 60
+        )
+        
+        return response
+    
+    except Exception as e:
+        print(f"Error during user creation: {str(e)}")
+        return JsonResponse({
+            'error': 'Failed to create new account'
+        }, status=500)
 
-# @csrf_exempt
-# def login_view(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+@csrf_exempt
+def signup_samaritan(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
     
-#     data = json.loads(request.body)
-#     email = data.get('email')
-#     password = data.get('password')
-    
-#     user = authenticate(username=email, password=password)
-#     if user is not None:
-#         token = generate_jwt_token(user)
+    try:
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
         
-#         response = JsonResponse({
-#             'message': 'Login successful',
-#         })
+        is_valid, error_message = validate_samaritan_data(data)
         
-#         response.set_cookie(
-#             key='jwt',
-#             value=token,
-#             httponly=True,
-#             secure=False,  # false since HTTPS terminates at nginx
-#             samesite='Lax',  
-#             max_age=24 * 60 * 60  # 24 hours in seconds
-#         )
+        print("Validation Complete!")
         
-#         return response
-#     else:
-#         return JsonResponse({'error': 'Invalid credentials'}, status=401)
+        if not is_valid:
+            return JsonResponse({'error': error_message}, status=400)
+        
+        # Create user data dictionary
+        user_data = {
+            'username': data.get('username'),
+            'email': data.get('email'),
+            'password': data.get('password'),
+            'is_staff':False
+        }
+        
+        address_data = data.pop('address')
 
-# @token_required
-# @csrf_exempt
-# def logout_view(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
+        # Create samaritan-specific data dictionary
+        org_data = {
+            'city': address_data.get('city'),
+            'province': address_data.get('province'),
+        }
+        
+        # Create the samaritan user
+        samaritan = Samaritan.objects.create(
+            **user_data,
+            **org_data
+        )
+        
+        samaritan.set_password(user_data['password'])
+        samaritan.save()
+        
+        token = generate_jwt_token({
+            'username': samaritan.username,
+            'email': samaritan.email,
+            'is_staff': False,
+            'user_type': samaritan.user_type,
+        })
+        
+        response = JsonResponse({
+            'message': 'Sign up is successful',
+        })
+        
+        response.set_cookie(
+            key='jwt',
+            value=token,
+            httponly=True,
+            secure=False,
+            samesite='Lax',
+            max_age=24 * 60 * 60
+        )
+        
+        return response
     
-#     response = JsonResponse({'message': 'Successfully logged out'})
-#     # Delete the JWT cookie with the same parameters as when it was set
-#     response.delete_cookie(
-#         key='jwt'
-#     )
+    except Exception as e:
+        print(f"Error during user creation: {str(e)}")
+        return JsonResponse({
+            'error': 'Failed to create new account'
+        }, status=500)
 
-#     return response
+@csrf_exempt
+def login(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+    try:
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+        
+        # First authenticate the user
+        user = authenticate(username=username, password=password)
+        print('User : ',user)
+        
+        if user is not None:
+            # Get the specific instance (Organization or Samaritan)
+            if user.user_type == 'organization':
+                specific_user = Organization.objects.get(user=user)
+            else:  # samaritan
+                specific_user = Samaritan.objects.get(user=user)
+            
+            # Create token payload
+            token_payload = {
+                'username': specific_user.username,
+                'email': specific_user.email,
+                'is_staff': False,
+                'user_type': specific_user.user_type,
+            }
+            
+            # Generate token
+            token = generate_jwt_token(token_payload)
+            
+            response = JsonResponse({
+                'message': 'Login successful',
+            })
+            
+            response.set_cookie(
+                key='jwt',
+                value=token,
+                httponly=True,
+                secure=False,
+                samesite='Lax',
+                max_age=24 * 60 * 60
+            )
+            
+            return response
+        else:
+            return JsonResponse({'error': 'Invalid credentials'}, status=401)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except (Organization.DoesNotExist, Samaritan.DoesNotExist) as e:
+        return JsonResponse({'error': 'User type mismatch'}, status=400)
+    except Exception as e:
+        print(f"Login error: {str(e)}")
+        return JsonResponse({'error': 'Login failed'}, status=500)
+    
+@csrf_exempt
+@token_required()
+def logout(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+    
+    try:
+        response = JsonResponse({'message': 'Successfully logged out'})
+        response.delete_cookie(key='jwt')
+        return response
+    except Exception as e:
+        print(f"Logout error: {str(e)}")
+        return JsonResponse({'error': 'Logout failed'}, status=500)
 
 # @token_required
 # def change_password(request):

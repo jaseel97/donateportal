@@ -1,42 +1,58 @@
-from django.contrib.auth.models import AbstractUser, Group, Permission
-from django.contrib.gis.db import models as gis_models
+import re
+
 from django.db import models
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+from django.contrib.auth.models import AbstractUser, Group, Permission
+from django.contrib.gis.db import models as gis_models
 
 class User(AbstractUser):
-    email = models.EmailField(unique=True)
-    is_admin = models.BooleanField(default=False)
+    USER_TYPE_CHOICES = (
+        ('organization', 'Organization'),
+        ('samaritan', 'Samaritan'),
+    )
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='samaritan')
     
-    # Override inherited fields to avoid conflicts
+    # Override the ManyToMany relationships with custom related_names
     groups = models.ManyToManyField(
         Group,
-        related_name="custom_user_set",
+        verbose_name='groups',
         blank=True,
-        help_text="The groups this user belongs to.",
-        verbose_name="groups",
+        related_name='custom_user_set',
+        help_text='The groups this user belongs to.'
     )
     user_permissions = models.ManyToManyField(
         Permission,
-        related_name="custom_user_permissions",
+        verbose_name='user permissions',
         blank=True,
-        help_text="Specific permissions for this user.",
-        verbose_name="user permissions",
+        related_name='custom_user_set',
+        help_text='Specific permissions for this user.'
     )
-    
-    def __str__(self):
-        return self.email
-    
-    def get_templates(self):
-        return self.templates.all()
 
-class Organization(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            if isinstance(self, Organization):
+                self.user_type = 'organization'
+            elif isinstance(self, Samaritan):
+                self.user_type = 'samaritan'
+        super().save(*args, **kwargs)
+
+class Organization(User):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, parent_link=True)
+    name = models.TextField()
     location = gis_models.PointField()
+    
+    address_line1 = models.CharField(max_length=255, blank=True, null=True)
+    address_line2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    province = models.CharField(max_length=2, blank=True, null=True)
+    postal_code = models.CharField(max_length=7, blank=True, null=True)
 
-class Samaritan(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+class Samaritan(User):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, parent_link=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    province = models.CharField(max_length=2, blank=True, null=True)
 
 class Item(models.Model):
     CATEGORY_CHOICES = [
@@ -62,12 +78,12 @@ class Item(models.Model):
     pickup_location = gis_models.PointField()
     reserved_till = models.DateTimeField(blank=True, null=True)
     posted_by = models.ForeignKey(
-        User,
+        Samaritan,
         on_delete=models.CASCADE,
         related_name="posted_items"
     )
     reserved_by = models.ForeignKey(
-        User,
+        Organization,
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
