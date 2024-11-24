@@ -1,16 +1,12 @@
 import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import illustration from "./assets/login.jpg";
 
 const Login = () => {
     const [formData, setFormData] = useState({ username: "", password: "" });
     const [message, setMessage] = useState("");
     const [isFlipped, setIsFlipped] = useState(false); // State for flipping
-
-    const dummyUser = {
-        username: "testuser",
-        email: "testuser@example.com",
-        password: "password123",
-    };
+    const navigate = useNavigate(); // Navigation hook
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -20,17 +16,46 @@ const Login = () => {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const { username, password } = formData;
 
-        if (
-            (username === dummyUser.username || username === dummyUser.email) &&
-            password === dummyUser.password
-        ) {
-            setMessage("Login successful!");
-        } else {
-            setMessage("Invalid username/email or password. Please try again.");
+        try {
+            const response = await fetch("http://localhost:8080/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ username, password }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log(data);
+
+                if (data.message === "Login successful") {
+                    setMessage("Login successful!");
+
+                    // Store JWT token in cookies or localStorage
+                    const jwt = response.headers.get("Set-Cookie");
+                    document.cookie = `jwt=${jwt}; path=/; Secure; SameSite=Lax;`;
+
+                    // Navigate based on user type
+                    if (data.user_type === "samaritan") {
+                        navigate("/samaritan");
+                    } else if (data.user_type === "organization") {
+                        navigate("/organization");
+                    }
+                } else {
+                    setMessage(data.error || "An error occurred. Please try again.");
+                }
+            } else {
+                const errorData = await response.json();
+                setMessage(errorData.error || "Invalid credentials.");
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            setMessage("Unable to log in. Please try again later.");
         }
     };
 
@@ -51,8 +76,9 @@ const Login = () => {
 
             {/* Right Section with Login and Flip Animation */}
             <div
-                className={`relative w-5/12 bg-white shadow-xl transition-transform duration-500 transform ${isFlipped ? "rotate-y-180" : ""
-                    }`}
+                className={`relative w-5/12 bg-white shadow-xl transition-transform duration-500 transform ${
+                    isFlipped ? "rotate-y-180" : ""
+                }`}
                 style={{
                     perspective: "1000px",
                     transformStyle: "preserve-3d",
@@ -60,11 +86,12 @@ const Login = () => {
             >
                 {/* Front Side: Login Form */}
                 <div
-                    className={`absolute w-full h-full backface-hidden ${isFlipped ? "hidden" : "flex"
-                        } flex-col items-center justify-center p-8`}
+                    className={`absolute w-full h-full backface-hidden ${
+                        isFlipped ? "hidden" : "flex"
+                    } flex-col items-center justify-center p-8`}
                 >
                     <h1 className="text-3xl font-extrabold text-blue-600 mb-6 text-center">
-                        Welcome Back!
+                        Samaritan Connect
                     </h1>
                     <p className="text-center text-gray-600 mb-4">
                         Please log in to your account
@@ -75,7 +102,7 @@ const Login = () => {
                                 htmlFor="username"
                                 className="block text-sm font-semibold text-gray-800"
                             >
-                                Email Address
+                                Username or Email
                             </label>
                             <input
                                 type="text"
@@ -83,7 +110,7 @@ const Login = () => {
                                 name="username"
                                 value={formData.username}
                                 onChange={handleChange}
-                                placeholder="Enter your email"
+                                placeholder="Enter your username or email"
                                 className="mt-2 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-700 sm:text-sm bg-blue-50"
                                 required
                             />
@@ -115,21 +142,22 @@ const Login = () => {
                     </form>
                     {message && (
                         <p
-                            className={`mt-4 text-center ${message.includes("successful")
+                            className={`mt-4 text-center ${
+                                message.includes("successful")
                                     ? "text-green-600"
                                     : "text-red-600"
-                                } font-semibold`}
+                            } font-semibold`}
                         >
                             {message}
                         </p>
                     )}
                     <div className="flex justify-between w-full mt-4">
-                        <a
-                            href="/register"
+                        <Link
+                            to="/signup"
                             className="text-blue-600 hover:underline text-sm font-medium"
                         >
                             Don't have an account? Register here
-                        </a>
+                        </Link>
                         <a
                             href="/forgot-password"
                             className="text-blue-600 hover:underline text-sm font-medium"
@@ -148,11 +176,12 @@ const Login = () => {
 
                 {/* Back Side: About App */}
                 <div
-                    className={`absolute w-full h-full backface-hidden rotate-y-180 ${isFlipped ? "flex" : "hidden"
-                        } flex-col items-center justify-center p-8`}
+                    className={`absolute w-full h-full backface-hidden rotate-y-180 ${
+                        isFlipped ? "flex" : "hidden"
+                    } flex-col items-center justify-center p-8`}
                 >
                     <h1 className="text-3xl font-extrabold text-blue-600 mb-6 text-center">
-                        About Our App
+                        About Samaritan Connect
                     </h1>
                     <p className="text-center text-gray-700">
                         This app helps you connect, share, and grow. Explore all

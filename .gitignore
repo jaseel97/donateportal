@@ -166,3 +166,5 @@ prod.env
 
 **/migrations/*
 !**/migrations/__init__.py
+postgres/
+.DS_Store
