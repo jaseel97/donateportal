@@ -164,6 +164,5 @@ cython_debug/
 dev.env
 prod.env
 
-postgres/
-
-.DS_Store
+**/migrations/*
+!**/migrations/__init__.py

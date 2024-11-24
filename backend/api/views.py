@@ -14,7 +14,6 @@ from api.jwt import generate_jwt_token, token_required
 from api.validation import validate_organization_data, validate_samaritan_data
 
 from .models import Organization, Item, Samaritan
-from .constants import user_type_organization, user_type_samaritan
 
 
 def index(request):
@@ -34,17 +33,16 @@ def signup_organization(request):
         
         is_valid, error_message = validate_organization_data(data)
         
-        print("Validation Complete!")
+        print("Validation Complete! isValid : ", is_valid)
         
         if not is_valid:
             return JsonResponse({'error': error_message}, status=400)
         
-        # Extract nested data
+        # flatten
         location_data = data.pop('location')
         point = Point(location_data['longitude'], location_data['latitude'])
         address_data = data.pop('address')
         
-        # Create user data dictionary
         user_data = {
             'username': data.get('username'),
             'email': data.get('email'),
@@ -63,13 +61,11 @@ def signup_organization(request):
             'postal_code': address_data.get('postal_code'),
         }
         
-        # Create the organization user
         organization = Organization.objects.create(
             **user_data,
             **org_data
         )
         
-        # Set password properly
         organization.set_password(user_data['password'])
         organization.save()
         
@@ -117,12 +113,11 @@ def signup_samaritan(request):
         
         is_valid, error_message = validate_samaritan_data(data)
         
-        print("Validation Complete!")
+        print("Validation Complete! isValid : ", is_valid)
         
         if not is_valid:
             return JsonResponse({'error': error_message}, status=400)
         
-        # Create user data dictionary
         user_data = {
             'username': data.get('username'),
             'email': data.get('email'),
@@ -132,13 +127,11 @@ def signup_samaritan(request):
         
         address_data = data.pop('address')
 
-        # Create samaritan-specific data dictionary
         org_data = {
             'city': address_data.get('city'),
             'province': address_data.get('province'),
         }
         
-        # Create the samaritan user
         samaritan = Samaritan.objects.create(
             **user_data,
             **org_data
@@ -185,26 +178,20 @@ def login(request):
         username = data.get('username')
         password = data.get('password')
         
-        # First authenticate the user
         user = authenticate(username=username, password=password)
-        print('User : ',user)
         
         if user is not None:
-            # Get the specific instance (Organization or Samaritan)
             if user.user_type == 'organization':
                 specific_user = Organization.objects.get(user=user)
             else:  # samaritan
                 specific_user = Samaritan.objects.get(user=user)
             
-            # Create token payload
             token_payload = {
                 'username': specific_user.username,
                 'email': specific_user.email,
                 'is_staff': False,
                 'user_type': specific_user.user_type,
             }
-            
-            # Generate token
             token = generate_jwt_token(token_payload)
             
             response = JsonResponse({
