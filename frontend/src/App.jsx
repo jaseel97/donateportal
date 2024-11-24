@@ -1,13 +1,11 @@
-import React from 'react';
-import './App.css';
-import OrganizationHome from './OrganizationHome';
+import { useState } from 'react'
+import './App.css'
+import SamaritanHome from './SamaritanHome'
 
 function App() {
-  return (
-    <div>
-      <OrganizationHome />
-    </div>
-  );
+  return(
+    <SamaritanHome  />
+  )
 }
 
 export default App;
