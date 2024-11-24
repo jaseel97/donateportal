@@ -4,8 +4,10 @@ from . import views
 from .views import ItemView
 
 urlpatterns = [
-    path("", views.index, name="index"),
+    path('', views.index, name='index'),
     path('items', ItemView.as_view(), name='items'),
+
+    path('samaritan/donate', views.donate_item, name='donate_items'),
 
     path('auth/organization/signup', views.signup_organization, name='signup_organization'),
     path('auth/samaritan/signup', views.signup_samaritan, name='signup_samaritan'),

@@ -1,8 +1,8 @@
 import re
 from typing import Dict, List, Union, Tuple
 from django.http import JsonResponse
-from .models import Organization, Samaritan, User
-from django.contrib.gis.geos import Point
+from .models import Item, Organization, Samaritan, User
+# from django.contrib.gis.geos import Point
 
 def validate_coordinates(location_data):
     """
@@ -77,6 +77,26 @@ def validate_unique_user(email, username):
         return False, "Unknown Error"
         
     return True, None
+
+def validate_category(category_data):
+    """
+    Validate item category value.
+    Returns (is_valid, error_message, valid_categories_dict)
+    """
+    if not category_data :
+        return False, "Category is required", dict(Item.CATEGORY_CHOICES)
+
+    try:
+        category = int(category_data)
+        valid_categories = dict(Item.CATEGORY_CHOICES)
+        
+        if category not in valid_categories.keys():
+            return False, "Invalid category", valid_categories
+            
+        return True, None, valid_categories
+        
+    except (ValueError, TypeError):
+        return False, "Category must be a number", dict(Item.CATEGORY_CHOICES)
 
 #------------------------------------------------------------ Organization Validation ------------------------------------------------------------#
 
