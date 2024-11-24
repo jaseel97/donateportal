@@ -1,5 +1,4 @@
 import { useState } from "react";
-import "./OrganizationHome.css";
 
 const categoryMapping = {
     0: "Food",
@@ -213,32 +212,91 @@ const items = [
     },
 ];
 
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in kilometers
+}
+
 function OrganizationHome() {
+    // Hardcoded location of the logged-in organization
+    const organizationLocation = { lat: 42.3173, lon: -82.5039 };
+
     const [filter, setFilter] = useState("");
     const [search, setSearch] = useState("");
     const [pickupDate, setPickupDate] = useState("");
+    const [proximityFilter, setProximityFilter] = useState("");
+    const [selectedItem, setSelectedItem] = useState(null); // Tracks selected item
+    const [isModalOpen, setModalOpen] = useState(false); // Tracks modal visibility
+
+    const proximityOptions = [
+        { label: "All", value: "" },
+        { label: "5 km", value: 5 },
+        { label: "10 km", value: 10 },
+        { label: "20 km", value: 20 },
+    ];
 
     const filteredItems = items.filter((item) => {
         const matchesCategory = filter ? item.category.toString() === filter : true;
         const matchesSearch = item.description.toLowerCase().includes(search.toLowerCase());
-
         const matchesDate = pickupDate
             ? new Date(item.pickupTime).toISOString().split("T")[0] === pickupDate
             : true;
 
-        return matchesCategory && matchesSearch && matchesDate;
+        const [_, pickupLon, pickupLat] = item.pickupLocation.match(/POINT \((-?\d+.\d+) (-?\d+.\d+)\)/);
+        const distance = calculateDistance(
+            organizationLocation.lat,
+            organizationLocation.lon,
+            parseFloat(pickupLat),
+            parseFloat(pickupLon)
+        );
+
+        const matchesProximity = proximityFilter ? distance <= proximityFilter : true;
+
+        return matchesCategory && matchesSearch && matchesDate && matchesProximity;
     });
 
+    const openModal = (item) => {
+        setSelectedItem(item);
+        setModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setSelectedItem(null);
+        setModalOpen(false);
+    };
+
+    const handleReserve = () => {
+        alert(`Reserved item: ${selectedItem.description}`);
+        closeModal();
+    };
+
     return (
-        <div className="max-w-7xl w-full">
-            <h1>Organization - Choose Donation</h1>
-            <div className="filter-section">
-                <div className="filter-by-category">
-                    <label htmlFor="filter">Filter by Category:</label>
+        <div className="max-w-7xl w-full mx-auto p-4">
+            <h1 className="text-2xl font-bold text-center mb-8">
+                Organization - Choose Donation
+            </h1>
+
+            {/* Filter Section */}
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-6 mb-6">
+                {/* Filter by Category */}
+                <div className="flex flex-col items-start w-full max-w-sm">
+                    <label htmlFor="filter" className="font-medium mb-2">
+                        Filter by Category:
+                    </label>
                     <select
                         id="filter"
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}
+                        className="p-2 border border-gray-300 rounded-md shadow-sm w-full"
                     >
                         <option value="">All</option>
                         {Object.keys(categoryMapping).map((categoryId) => (
@@ -249,52 +307,126 @@ function OrganizationHome() {
                     </select>
                 </div>
 
-                <div className="search-by-description">
-                    <label htmlFor="search">Search by Description:</label>
+                {/* Search by Description */}
+                <div className="flex flex-col items-start w-full max-w-sm">
+                    <label htmlFor="search" className="font-medium mb-2">
+                        Search by Description:
+                    </label>
                     <input
                         type="text"
                         id="search"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search donations"
+                        className="p-2 border border-gray-300 rounded-md shadow-sm w-full"
                     />
                 </div>
 
-                <div className="filter-by-date">
-                    <label htmlFor="pickupDate">Filter by Pickup Date:</label>
+                {/* Filter by Pickup Date */}
+                <div className="flex flex-col items-start w-full max-w-sm">
+                    <label htmlFor="pickupDate" className="font-medium mb-2">
+                        Filter by Pickup Date:
+                    </label>
                     <input
                         type="date"
                         id="pickupDate"
                         value={pickupDate}
                         onChange={(e) => setPickupDate(e.target.value)}
+                        className="p-2 border border-gray-300 rounded-md shadow-sm w-full"
                     />
                 </div>
+
+                {/* Filter by Proximity */}
+                <div className="flex flex-col items-start w-full max-w-sm">
+                    <label htmlFor="proximityFilter" className="font-medium mb-2">
+                        Filter by Proximity:
+                    </label>
+                    <select
+                        id="proximityFilter"
+                        value={proximityFilter}
+                        onChange={(e) => setProximityFilter(e.target.value)}
+                        className="p-2 border border-gray-300 rounded-md shadow-sm w-full"
+                    >
+                        {proximityOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
-            
-            <div className="grid-container">
+
+            {/* Grid Section */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {filteredItems.map((item) => (
-                    <div key={item.id} className="card">
-                        <h3>{item.description}</h3>
-                        <p>
+                    <div
+                        key={item.id}
+                        className="border border-gray-300 rounded-lg p-4 bg-white shadow-lg transition transform hover:-translate-y-2 hover:shadow-xl cursor-pointer"
+                        onClick={() => openModal(item)}
+                    >
+                        <h3 className="font-bold text-lg text-gray-800 mb-2">
+                            {item.description}
+                        </h3>
+                        <p className="text-sm text-gray-600">
                             <strong>Category:</strong> {categoryMapping[item.category]}
                         </p>
-                        <p>
+                        <p className="text-sm text-gray-600">
                             <strong>Weight:</strong> {item.weight} {item.weightUnit}
                         </p>
-                        <p>
+                        <p className="text-sm text-gray-600">
                             <strong>Volume:</strong> {item.volume} {item.volumeUnit}
                         </p>
-                        <p>
+                        <p className="text-sm text-gray-600">
                             <strong>Pickup Time:</strong>{" "}
                             {new Date(item.pickupTime).toLocaleString()}
                         </p>
-                        <p>
+                        <p className="text-sm text-gray-600">
                             <strong>Reserved Till:</strong>{" "}
                             {new Date(item.reservedTill).toLocaleString()}
                         </p>
                     </div>
                 ))}
             </div>
+
+            {/* Modal Section */}
+            {isModalOpen && selectedItem && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+                        <h2 className="text-2xl font-bold mb-4">{selectedItem.description}</h2>
+                        <p>
+                            <strong>Category:</strong> {categoryMapping[selectedItem.category]}
+                        </p>
+                        <p>
+                            <strong>Weight:</strong> {selectedItem.weight} {selectedItem.weightUnit}
+                        </p>
+                        <p>
+                            <strong>Volume:</strong> {selectedItem.volume} {selectedItem.volumeUnit}
+                        </p>
+                        <p>
+                            <strong>Pickup Time:</strong>{" "}
+                            {new Date(selectedItem.pickupTime).toLocaleString()}
+                        </p>
+                        <p>
+                            <strong>Reserved Till:</strong>{" "}
+                            {new Date(selectedItem.reservedTill).toLocaleString()}
+                        </p>
+                        <div className="flex justify-end mt-6">
+                            <button
+                                className="mr-2 px-4 py-2 bg-gray-300 rounded-lg"
+                                onClick={closeModal}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+                                onClick={handleReserve}
+                            >
+                                Reserve
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -1,10 +1,9 @@
-import { useState } from 'react'
 import './App.css'
-import SamaritanHome from './SamaritanHome'
+import OrganizationHome from './OrganizationHome';
 
 function App() {
   return(
-    <SamaritanHome  />
+    <OrganizationHome  />
   )
 }
 
