@@ -69,6 +69,7 @@ const DonationForm = ({ onSubmit }) => {
                 value={formData.category}
                 onChange={handleInputChange}
                 categories={categories}
+                
               />
               <DatePicker
                 value={formData.pickupDate}

@@ -2,19 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
-/* styles.css */
-.textareastyle {
-    @apply rounded-md border border-gray-300 py-2 pl-3 pr-10 w-full bg-white text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm;
+/* Base input style */
+.base-input-style {
+    @apply relative w-full bg-white py-3 pl-4 pr-10 text-left border-2 border-sky-200 
+    hover:border-sky-400 focus:outline-none focus:border-sky-500 
+    transition-all duration-200 rounded-t-lg;
 }
-  
+
+/* Input styles */
+.textareastyle {
+    @apply base-input-style;
+}
+
+/* Button styles */
+.button-base {
+    @apply px-8 py-3 text-white transition-all duration-200
+    focus:outline-none focus:ring-2 focus:ring-offset-2
+    rounded-tl-3xl rounded-br-3xl rounded-tr-lg rounded-bl-lg
+    hover:shadow-lg active:scale-95;
+}
+
 .resetbutton {
-    @apply px-8 py-3 rounded-2xl text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+    @apply button-base bg-red-500 hover:bg-red-600 focus:ring-red-400;
 }
 
 .submitbutton {
-    @apply px-8 py-3 rounded-2xl text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+    @apply button-base bg-sky-500 hover:bg-sky-600 focus:ring-sky-400;
 }
 
+/* Category styles */
+.categorylabel {
+    @apply block text-sm font-semibold text-sky-800 mb-2 transition-colors duration-200;
+}
+
+.categorystyle {
+    @apply base-input-style;
+}
+
+.categorylist {
+    @apply absolute z-10 mt-1 max-h-60 w-full overflow-auto bg-white py-1 
+    shadow-lg border-2 border-sky-200 focus:outline-none animate-slideIn rounded-t-lg;
+}
+
+.categoryitem {
+    @apply relative cursor-pointer select-none py-2 pl-8 pr-4 
+    hover:bg-sky-50 transition-colors duration-150;
+}
+
+.categoryitem-selected {
+    @apply bg-sky-100;
+}
+
+.categoryitem-text {
+    @apply block truncate text-gray-700;
+}
+
+.categoryitem-text-selected {
+    @apply font-medium text-sky-800;
+}
+
+.category-icon {
+    @apply h-5 w-5 text-sky-400 transition-transform duration-200;
+}
+
+.category-checkicon {
+    @apply absolute inset-y-0 left-0 flex items-center pl-2 text-sky-500;
+}
+
+.checkicon {
+    @apply h-4 w-4 animate-fadeIn;
+}
+
+/* Upload styles */
 .uploadimagetext {
-    @apply relative cursor-pointer rounded-md font-semibold text-blue-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 hover:text-blue-500;
+    @apply relative cursor-pointer rounded-md font-semibold text-sky-600 
+    hover:text-sky-500 transition-colors duration-200
+    focus-within:outline-none focus-within:ring-2 
+    focus-within:ring-sky-500 focus-within:ring-offset-2;
 }
