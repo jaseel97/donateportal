@@ -1,17 +1,5 @@
-import { useState } from "react";
-
-const categoryMapping = {
-    0: "Food",
-    1: "Clothing",
-    2: "Books",
-    3: "Furniture",
-    4: "Household Items",
-    5: "Electronics",
-    6: "Toys",
-    7: "Medical Supplies",
-    8: "Pet Supplies",
-    9: "Others"
-};
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 const items = [
     {
@@ -227,15 +215,32 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 function OrganizationHome() {
-    // Hardcoded location of the logged-in organization
     const organizationLocation = { lat: 42.3173, lon: -82.5039 };
 
     const [filter, setFilter] = useState("");
     const [search, setSearch] = useState("");
     const [pickupDate, setPickupDate] = useState("");
     const [proximityFilter, setProximityFilter] = useState("");
-    const [selectedItem, setSelectedItem] = useState(null); // Tracks selected item
-    const [isModalOpen, setModalOpen] = useState(false); // Tracks modal visibility
+    const [categories, setCategories] = useState({}); // Store fetched categories
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [isModalOpen, setModalOpen] = useState(false);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await axios.get("http://localhost:8080/categories", {
+                    headers: {
+                        Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IlRhbmdvRGphbmdvIiwiZW1haWwiOiJ0YW5nb0BkamFuZ28uY2EiLCJpc19zdGFmZiI6ZmFsc2UsInVzZXJfdHlwZSI6Im9yZ2FuaXphdGlvbiIsImV4cCI6MTczNTA5Mjc4OX0.Us5JB1L6Zh3rhPSxTYUvCzYIk-G8JHcYCPSohuhI1VM"
+                    }
+                });
+                setCategories(response.data.options);
+            } catch (error) {
+                console.error("Error fetching categories:", error);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     const proximityOptions = [
         { label: "All", value: "" },
@@ -279,11 +284,13 @@ function OrganizationHome() {
         closeModal();
     };
 
+    const handleCancel = () => {
+        closeModal();
+    };
+
     return (
         <div className="max-w-7xl w-full mx-auto p-4">
-            <h1 className="text-2xl font-bold text-center mb-8">
-                Organization - Choose Donation
-            </h1>
+            <h1 className="text-2xl font-bold text-center mb-8">Organization - Choose Donation</h1>
 
             {/* Filter Section */}
             <div className="flex flex-col lg:flex-row items-center justify-center gap-6 mb-6">
@@ -299,9 +306,9 @@ function OrganizationHome() {
                         className="p-2 border border-gray-300 rounded-md shadow-sm w-full"
                     >
                         <option value="">All</option>
-                        {Object.keys(categoryMapping).map((categoryId) => (
+                        {Object.keys(categories).map((categoryId) => (
                             <option key={categoryId} value={categoryId}>
-                                {categoryMapping[categoryId]}
+                                {categories[categoryId]}
                             </option>
                         ))}
                     </select>
@@ -364,11 +371,9 @@ function OrganizationHome() {
                         className="border border-gray-300 rounded-lg p-4 bg-white shadow-lg transition transform hover:-translate-y-2 hover:shadow-xl cursor-pointer"
                         onClick={() => openModal(item)}
                     >
-                        <h3 className="font-bold text-lg text-gray-800 mb-2">
-                            {item.description}
-                        </h3>
+                        <h3 className="font-bold text-lg text-gray-800 mb-2">{item.description}</h3>
                         <p className="text-sm text-gray-600">
-                            <strong>Category:</strong> {categoryMapping[item.category]}
+                            <strong>Category:</strong> {categories[item.category] || "Unknown"}
                         </p>
                         <p className="text-sm text-gray-600">
                             <strong>Weight:</strong> {item.weight} {item.weightUnit}
@@ -376,52 +381,45 @@ function OrganizationHome() {
                         <p className="text-sm text-gray-600">
                             <strong>Volume:</strong> {item.volume} {item.volumeUnit}
                         </p>
-                        <p className="text-sm text-gray-600">
-                            <strong>Pickup Time:</strong>{" "}
-                            {new Date(item.pickupTime).toLocaleString()}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                            <strong>Reserved Till:</strong>{" "}
-                            {new Date(item.reservedTill).toLocaleString()}
-                        </p>
                     </div>
                 ))}
             </div>
 
-            {/* Modal Section */}
-            {isModalOpen && selectedItem && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 max-w-lg w-full">
+            {/* Modal */}
+            {isModalOpen && (
+                <div
+                    className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50"
+                    onClick={closeModal}
+                >
+                    <div
+                        className="bg-white p-6 rounded-lg w-full max-w-md"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <h2 className="text-2xl font-bold mb-4">{selectedItem.description}</h2>
-                        <p>
-                            <strong>Category:</strong> {categoryMapping[selectedItem.category]}
+                        <p className="text-lg mb-2">
+                            <strong>Category:</strong> {categories[selectedItem.category] || "Unknown"}
                         </p>
-                        <p>
+                        <p className="text-lg mb-2">
                             <strong>Weight:</strong> {selectedItem.weight} {selectedItem.weightUnit}
                         </p>
-                        <p>
+                        <p className="text-lg mb-2">
                             <strong>Volume:</strong> {selectedItem.volume} {selectedItem.volumeUnit}
                         </p>
-                        <p>
-                            <strong>Pickup Time:</strong>{" "}
-                            {new Date(selectedItem.pickupTime).toLocaleString()}
+                        <p className="text-lg mb-4">
+                            <strong>Pickup Date:</strong> {new Date(selectedItem.pickupTime).toLocaleDateString()}
                         </p>
-                        <p>
-                            <strong>Reserved Till:</strong>{" "}
-                            {new Date(selectedItem.reservedTill).toLocaleString()}
-                        </p>
-                        <div className="flex justify-end mt-6">
+                        <div className="flex justify-end gap-4">
                             <button
-                                className="mr-2 px-4 py-2 bg-gray-300 rounded-lg"
-                                onClick={closeModal}
+                                onClick={handleReserve}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                             >
-                                Cancel
+                                Reserve Item
                             </button>
                             <button
-                                className="px-4 py-2 bg-blue-500 text-white rounded-lg"
-                                onClick={handleReserve}
+                                onClick={handleCancel}
+                                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
                             >
-                                Reserve
+                                Cancel
                             </button>
                         </div>
                     </div>
