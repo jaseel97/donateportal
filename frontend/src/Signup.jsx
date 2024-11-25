@@ -1,5 +1,21 @@
 import React, { useState } from "react";
-import illustration from "./assets/login.jpg"; // Make sure to import your image here
+import illustration from "./assets/login.jpg";
+
+const provinces = [
+  "Alberta",
+  "British Columbia",
+  "Manitoba",
+  "New Brunswick",
+  "Newfoundland and Labrador",
+  "Nova Scotia",
+  "Ontario",
+  "Prince Edward Island",
+  "Quebec",
+  "Saskatchewan",
+  "Northwest Territories",
+  "Nunavut",
+  "Yukon"
+];
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -29,7 +45,6 @@ const Signup = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Add your form validation and submission logic here
     setMessage("Signup successful!");
   };
 
@@ -208,16 +223,21 @@ const Signup = () => {
                   >
                     Province
                   </label>
-                  <input
-                    type="text"
+                  <select
                     id="province"
                     name="province"
                     value={formData.province}
                     onChange={handleChange}
-                    placeholder="Enter your province"
                     className="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-700 sm:text-sm bg-blue-50"
                     required
-                  />
+                  >
+                    <option value="" disabled>Select your province</option>
+                    {provinces.map((province) => (
+                      <option key={province} value={province}>
+                        {province}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 {/* Postal Code */}
                 <div>
