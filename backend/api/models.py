@@ -82,6 +82,8 @@ class Item(models.Model):
         on_delete=models.CASCADE,
         related_name="posted_items"
     )
+
+    is_reserved = models.BooleanField(default=False)
     reserved_by = models.ForeignKey(
         Organization,
         on_delete=models.SET_NULL,
@@ -89,5 +91,13 @@ class Item(models.Model):
         null=True,
         related_name="reserved_items"
     )
-    pickup_time = models.DateTimeField(blank=True, null=True)
+    
     is_picked_up = models.BooleanField(default=False)
+    scheduled_pickup_time = models.DateTimeField(blank=True, null=True)
+    picked_up_by = models.ForeignKey(
+        Organization,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="picked_up_items"
+    )
