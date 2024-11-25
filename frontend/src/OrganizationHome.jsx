@@ -1,23 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Radius of the Earth in kilometers
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in kilometers
-}
-
 function OrganizationHome() {
-    const organizationLocation = { lat: 42.3173, lon: -82.5039 };
-
     const [filter, setFilter] = useState("");
     const [search, setSearch] = useState("");
     const [pickupDate, setPickupDate] = useState("");
@@ -47,11 +31,20 @@ function OrganizationHome() {
         fetchCategories();
     }, []);
 
-    const fetchItems = async (page = 1, perPage = 12) => {
+    const fetchItems = async (page = 1, perPage = 12, radius = "") => {
         try {
-            const response = await axios.get("http://localhost:8080/listings", {
-                params: { page, items_per_page: perPage, radius: 10000 },
-                headers: {
+            const params = { 
+            page, 
+            items_per_page: perPage 
+        };
+
+        if (radius) {
+            params.radius = radius;
+        }
+
+        const response = await axios.get("http://localhost:8080/listings", {
+            params,
+            headers: {
                     Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IlRhbmdvRGphbmdvIiwiZW1haWwiOiJ0YW5nb0BkamFuZ28uY2EiLCJpc19zdGFmZiI6ZmFsc2UsInVzZXJfdHlwZSI6Im9yZ2FuaXphdGlvbiIsImV4cCI6MTczNTA5Mjc4OX0.Us5JB1L6Zh3rhPSxTYUvCzYIk-G8JHcYCPSohuhI1VM"
                 }
             });
@@ -76,8 +69,8 @@ function OrganizationHome() {
     };
 
     useEffect(() => {
-        fetchItems(currentPage, itemsPerPage);
-    }, [currentPage, itemsPerPage]);
+        fetchItems(currentPage, itemsPerPage, proximityFilter);
+    }, [currentPage, itemsPerPage, proximityFilter]);
 
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
@@ -90,6 +83,7 @@ function OrganizationHome() {
         { label: "5 km", value: 5 },
         { label: "10 km", value: 10 },
         { label: "20 km", value: 20 },
+        { label: "50 km", value: 50 },
     ];
 
     const filteredItems = items.filter((item) => {
@@ -99,17 +93,7 @@ function OrganizationHome() {
             ? new Date(item.bestBefore).toISOString().split("T")[0] === pickupDate
             : true;
 
-        const [_, pickupLon, pickupLat] = item.pickupLocation.match(/POINT \((-?\d+.\d+) (-?\d+.\d+)\)/);
-        const distance = calculateDistance(
-            organizationLocation.lat,
-            organizationLocation.lon,
-            parseFloat(pickupLat),
-            parseFloat(pickupLon)
-        );
-
-        const matchesProximity = proximityFilter ? distance <= proximityFilter : true;
-
-        return matchesCategory && matchesSearch && matchesDate && matchesProximity;
+        return matchesCategory && matchesSearch && matchesDate;
     });
 
     const openModal = (item) => {
