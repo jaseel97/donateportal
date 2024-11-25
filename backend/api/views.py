@@ -196,13 +196,24 @@ def login(request):
                 'user_type': specific_user.user_type,
             }
             token = generate_jwt_token(token_payload)
+            print("JWT token sent:", token)
             
             response = JsonResponse({
                 'message': 'Login successful',
+                'user_type': specific_user.user_type,
             })
             
             response.set_cookie(
-                key='jwt',
+                key='jwt2',
+                value=token,
+                httponly=True,
+                secure=False,
+                samesite='Lax',
+                max_age=24 * 60 * 60
+            )
+
+            response.set_cookie(
+                key='jwt1',
                 value=token,
                 httponly=True,
                 secure=False,

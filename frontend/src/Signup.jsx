@@ -7,12 +7,12 @@ const Signup = () => {
     lastName: "",
     email: "",
     password: "",
-    username: "", 
-    addressLine1: "", 
-    addressLine2: "", 
-    city: "", 
+    username: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
     province: "",
-    postalCode: "", 
+    postalCode: "",
   });
 
   const [message, setMessage] = useState("");
@@ -73,7 +73,7 @@ const Signup = () => {
               onClick={() => setAccountType("user")}
               className={`w-32 py-3 rounded-lg ${accountType === "user" ? "bg-blue-600 text-white" : "bg-blue-100 text-blue-600"}`}
             >
-              User
+              Samaritan
             </button>
             <button
               onClick={() => setAccountType("organization")}
@@ -245,6 +245,16 @@ const Signup = () => {
               >
                 Sign Up
               </button>
+              {/* Add "Already have an account?" Link */}
+              <p className="text-center text-gray-600 mt-4">
+                Already have an account?{" "}
+                <a
+                  href="/login"
+                  className="text-blue-600 hover:underline"
+                >
+                  Login
+                </a>
+              </p>
             </form>
           ) : (
             // Form for User
@@ -352,6 +362,16 @@ const Signup = () => {
               >
                 Sign Up
               </button>
+              {/* Add "Already have an account?" Link */}
+              <p className="text-center text-gray-600 mt-4">
+                Already have an account?{" "}
+                <a
+                  href="/login"
+                  className="text-blue-600 hover:underline"
+                >
+                  Login
+                </a>
+              </p>
             </form>
           )}
           {message && <p className="text-center text-green-500 mt-4">{message}</p>}
