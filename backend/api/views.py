@@ -196,9 +196,11 @@ def login(request):
                 'user_type': specific_user.user_type,
             }
             token = generate_jwt_token(token_payload)
+            print("JWT token sent:", token)
             
             response = JsonResponse({
                 'message': 'Login successful',
+                'user_type': specific_user.user_type,
             })
             
             response.set_cookie(

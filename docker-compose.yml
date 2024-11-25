@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgis/postgis:14-3.5-alpine
     ports:
-      - "5432:5432"
+      #- "5432:5432"
       - "5400:5400"
     volumes:
       - ./postgres:/var/lib/postgresql/data
