@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import illustration from "./assets/login.jpg";
+import { apiDomain } from "./Config";
 
 const Login = () => {
     const [formData, setFormData] = useState({ username: "", password: "" });
     const [message, setMessage] = useState("");
-    const [isFlipped, setIsFlipped] = useState(false); // State for flipping
-    const navigate = useNavigate(); // Navigation hook
+    const [isFlipped, setIsFlipped] = useState(false); 
+    const navigate = useNavigate();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -21,11 +22,12 @@ const Login = () => {
         const { username, password } = formData;
 
         try {
-            const response = await fetch("http://localhost:8080/auth/login", {
+            const response = await fetch(`${apiDomain}/auth/login`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
+                credentials: 'include',
                 body: JSON.stringify({ username, password }),
             });
 
@@ -36,11 +38,10 @@ const Login = () => {
                 if (data.message === "Login successful") {
                     setMessage("Login successful!");
 
-                    // Store JWT token in cookies or localStorage
                     const jwt = response.headers.get("Set-Cookie");
-                    document.cookie = `jwt=${jwt}; path=/; Secure; SameSite=Lax;`;
+                    console.log(jwt)
+                    // document.cookie = `jwt=${jwt}; path=/; Secure; SameSite=Lax;`;
 
-                    // Navigate based on user type
                     if (data.user_type === "samaritan") {
                         navigate("/samaritan");
                     } else if (data.user_type === "organization") {
