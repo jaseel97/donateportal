@@ -468,7 +468,6 @@ def donate_item(request):
 @csrf_exempt
 @token_required()
 def get_item_listings_for_organizations(request):
-
     if request.user_type != 'organization':
         return JsonResponse({"error": "forbidden for samaritans"}, status=403)
     
@@ -518,22 +517,16 @@ def get_item_listings_for_organizations(request):
         queryset = Item.objects.filter(
             reserved_by__isnull=True,
             is_picked_up=False,
-            reserved_till__isnull=True
+            reserved_till__isnull=True,
+            pickup_location__distance_lte=(organization.location, D(m=radius_m))
         )
 
         if category is not None:
             queryset = queryset.filter(category=category)
-        
-        try:
-            queryset = Item.objects.filter(pickup_location__distance_lte=(organization.location, D(m=radius_m)))
 
-            queryset = queryset.annotate(
-                distance=DistanceDBFunction('pickup_location', organization.location)
-            ).order_by('distance')
-
-        except Exception as e:
-            print(f"Spatial query error: {str(e)}")
-            raise Exception(f"Error processing location query: {str(e)}")
+        queryset = queryset.annotate(
+            distance=DistanceDBFunction('pickup_location', organization.location)
+        ).order_by('distance')
         
         try:
             paginator = Paginator(queryset, items_per_page)
@@ -598,7 +591,7 @@ def get_item_listings_for_organizations(request):
             "items": items_data,
             "categories": dict(Item.CATEGORY_CHOICES)
         }, status=200)
-        
+
     except Organization.DoesNotExist:
         return JsonResponse({"error": "Organization not found"}, status=404)
     except Exception as e:

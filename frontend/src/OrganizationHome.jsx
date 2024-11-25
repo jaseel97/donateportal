@@ -31,20 +31,18 @@ function OrganizationHome() {
         fetchCategories();
     }, []);
 
-    const fetchItems = async (page = 1, perPage = 12, radius = "") => {
+    const fetchItems = async (page = 1, perPage = 12, radius = "", category = "") => {
         try {
-            const params = { 
-            page, 
-            items_per_page: perPage 
-        };
+            const params = {
+                page,
+                items_per_page: perPage,
+                ...(radius && { radius }),
+                ...(category && { category }),
+            };
 
-        if (radius) {
-            params.radius = radius;
-        }
-
-        const response = await axios.get("http://localhost:8080/listings", {
-            params,
-            headers: {
+            const response = await axios.get("http://localhost:8080/listings", {
+                params,
+                headers: {
                     Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IlRhbmdvRGphbmdvIiwiZW1haWwiOiJ0YW5nb0BkamFuZ28uY2EiLCJpc19zdGFmZiI6ZmFsc2UsInVzZXJfdHlwZSI6Im9yZ2FuaXphdGlvbiIsImV4cCI6MTczNTA5Mjc4OX0.Us5JB1L6Zh3rhPSxTYUvCzYIk-G8JHcYCPSohuhI1VM"
                 }
             });
@@ -69,8 +67,9 @@ function OrganizationHome() {
     };
 
     useEffect(() => {
-        fetchItems(currentPage, itemsPerPage, proximityFilter);
-    }, [currentPage, itemsPerPage, proximityFilter]);
+        const selectedCategory = filter === "" ? "" : filter;
+        fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
+    }, [currentPage, itemsPerPage, proximityFilter, filter]);
 
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
@@ -87,13 +86,12 @@ function OrganizationHome() {
     ];
 
     const filteredItems = items.filter((item) => {
-        const matchesCategory = filter ? item.category.toString() === filter : true;
         const matchesSearch = item.description.toLowerCase().includes(search.toLowerCase());
         const matchesDate = pickupDate
             ? new Date(item.bestBefore).toISOString().split("T")[0] === pickupDate
             : true;
 
-        return matchesCategory && matchesSearch && matchesDate;
+        return matchesSearch && matchesDate;
     });
 
     const openModal = (item) => {
