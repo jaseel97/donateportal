@@ -1,8 +1,8 @@
 import re
 from typing import Dict, List, Union, Tuple
 from django.http import JsonResponse
-from .models import Organization, Samaritan
-from django.contrib.gis.geos import Point
+from .models import Item, Organization, Samaritan, User
+# from django.contrib.gis.geos import Point
 
 def validate_coordinates(location_data):
     """
@@ -61,6 +61,43 @@ def validate_province(province):
         
     return True, None
 
+def validate_unique_user(email, username):
+    """
+    Validate that email and username are unique for Samaritan.
+    Returns (is_valid, error_message)
+    """
+    try :
+        if User.objects.filter(email=email).exists():
+            return False, "A user with this email already exists"
+
+        if User.objects.filter(username=username).exists():
+            return False, "A user with this username already exists"
+    except Exception as e:
+        print("Error : ", str(e))
+        return False, "Unknown Error"
+        
+    return True, None
+
+def validate_category(category_data):
+    """
+    Validate item category value.
+    Returns (is_valid, error_message, valid_categories_dict)
+    """
+    if not category_data :
+        return False, "Category is required", dict(Item.CATEGORY_CHOICES)
+
+    try:
+        category = int(category_data)
+        valid_categories = dict(Item.CATEGORY_CHOICES)
+        
+        if category not in valid_categories.keys():
+            return False, "Invalid category", valid_categories
+            
+        return True, None, valid_categories
+        
+    except (ValueError, TypeError):
+        return False, "Category must be a number", dict(Item.CATEGORY_CHOICES)
+
 #------------------------------------------------------------ Organization Validation ------------------------------------------------------------#
 
 def validate_organization_required_fields(data):
@@ -98,19 +135,6 @@ def validate_organization_required_fields(data):
     
     return (len(missing_fields) == 0, missing_fields)
 
-def validate_unique_organization(email, username):
-    """
-    Validate that email and username are unique.
-    Returns (is_valid, error_message)
-    """
-    if Organization.objects.filter(email=email).exists():
-        return False, "A user with this email already exists"
-        
-    if Organization.objects.filter(username=username).exists():
-        return False, "A user with this username already exists"
-        
-    return True, None
-
 def validate_organization_data(data):
     """
     Main validation function that combines all validations.
@@ -144,7 +168,7 @@ def validate_organization_data(data):
         return False, province_error
 
     # Validate unique user
-    unique_valid, unique_error = validate_unique_organization(
+    unique_valid, unique_error = validate_unique_user(
         data.get('email', ''), 
         data.get('username', '')
     )
@@ -152,7 +176,6 @@ def validate_organization_data(data):
         return False, unique_error
 
     return True, None
-
 
 #------------------------------------------------------------ Samaritan Validation ------------------------------------------------------------#
 
@@ -188,20 +211,6 @@ def validate_samaritan_required_fields(data):
     
     return (len(missing_fields) == 0, missing_fields)
 
-
-def validate_unique_samaritan(email, username):
-    """
-    Validate that email and username are unique for Samaritan.
-    Returns (is_valid, error_message)
-    """
-    if Samaritan.objects.filter(email=email).exists():
-        return False, "A user with this email already exists"
-        
-    if Samaritan.objects.filter(username=username).exists():
-        return False, "A user with this username already exists"
-        
-    return True, None
-
 def validate_samaritan_data(data):
     """
     Main validation function that combines all Samaritan validations.
@@ -210,7 +219,7 @@ def validate_samaritan_data(data):
     # Check required fields
     fields_valid, missing_fields = validate_samaritan_required_fields(data)
     if not fields_valid:
-        return False, f"Required fields missing: {', '.join(missing_fields)}", {}
+        return False, f"Required fields missing: {', '.join(missing_fields)}"
 
     # Get address data
     address_data = data.get('address', {})
@@ -220,14 +229,14 @@ def validate_samaritan_data(data):
         address_data.get('province', '')
     )
     if not province_valid:
-        return False, province_error, {}
+        return False, province_error
 
     # Validate unique user
-    unique_valid, unique_error = validate_unique_samaritan(
+    unique_valid, unique_error = validate_unique_user(
         data.get('email', ''), 
         data.get('username', '')
     )
     if not unique_valid:
-        return False, unique_error, {}
+        return False, unique_error
 
     return True, None

@@ -1,9 +1,12 @@
+from datetime import date, datetime
 import os
 import json
 import re
 
 from django.contrib.gis.geos import Point
-from django.contrib.gis.measure import Distance
+from django.contrib.gis.measure import D, Distance 
+from django.contrib.gis.db.models.functions import Distance as DistanceDBFunction
+
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views import View
@@ -11,10 +14,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
 
 from api.jwt import generate_jwt_token, token_required
-from api.validation import validate_organization_data, validate_samaritan_data
+from api.validation import validate_category, validate_coordinates, validate_organization_data, validate_samaritan_data
 
 from .models import Organization, Item, Samaritan
-from .constants import user_type_organization, user_type_samaritan
 
 
 def index(request):
@@ -34,17 +36,16 @@ def signup_organization(request):
         
         is_valid, error_message = validate_organization_data(data)
         
-        print("Validation Complete!")
+        print("Validation Complete! isValid : ", is_valid)
         
         if not is_valid:
             return JsonResponse({'error': error_message}, status=400)
         
-        # Extract nested data
+        # flatten
         location_data = data.pop('location')
         point = Point(location_data['longitude'], location_data['latitude'])
         address_data = data.pop('address')
         
-        # Create user data dictionary
         user_data = {
             'username': data.get('username'),
             'email': data.get('email'),
@@ -63,13 +64,11 @@ def signup_organization(request):
             'postal_code': address_data.get('postal_code'),
         }
         
-        # Create the organization user
         organization = Organization.objects.create(
             **user_data,
             **org_data
         )
         
-        # Set password properly
         organization.set_password(user_data['password'])
         organization.save()
         
@@ -117,12 +116,11 @@ def signup_samaritan(request):
         
         is_valid, error_message = validate_samaritan_data(data)
         
-        print("Validation Complete!")
+        print("Validation Complete! isValid : ", is_valid)
         
         if not is_valid:
             return JsonResponse({'error': error_message}, status=400)
         
-        # Create user data dictionary
         user_data = {
             'username': data.get('username'),
             'email': data.get('email'),
@@ -132,13 +130,11 @@ def signup_samaritan(request):
         
         address_data = data.pop('address')
 
-        # Create samaritan-specific data dictionary
         org_data = {
             'city': address_data.get('city'),
             'province': address_data.get('province'),
         }
         
-        # Create the samaritan user
         samaritan = Samaritan.objects.create(
             **user_data,
             **org_data
@@ -185,26 +181,20 @@ def login(request):
         username = data.get('username')
         password = data.get('password')
         
-        # First authenticate the user
         user = authenticate(username=username, password=password)
-        print('User : ',user)
         
         if user is not None:
-            # Get the specific instance (Organization or Samaritan)
             if user.user_type == 'organization':
                 specific_user = Organization.objects.get(user=user)
             else:  # samaritan
                 specific_user = Samaritan.objects.get(user=user)
             
-            # Create token payload
             token_payload = {
                 'username': specific_user.username,
                 'email': specific_user.email,
                 'is_staff': False,
                 'user_type': specific_user.user_type,
             }
-            
-            # Generate token
             token = generate_jwt_token(token_payload)
             
             response = JsonResponse({
@@ -328,36 +318,312 @@ def logout(request):
 
 
 #------------------------------------------------- App Views -------------------------------------------------#
+@csrf_exempt
+@token_required()
+def get_categories(request):
+    try:
+        categories = dict(Item.CATEGORY_CHOICES)
+        return JsonResponse({
+            "options" : categories
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+@token_required()
+def donate_item(request):
+    if request.method != 'POST':
+        return JsonResponse({
+            "error": "Method not allowed"
+        }, status=405)
+    
+    if request.user_type != 'samaritan':
+        return JsonResponse({
+            "error": "Only samaritans can donate items"
+        }, status=403)
+    
+    try:
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                "error": "Invalid JSON format"
+            }, status=400)
+        
+        required_fields = ['category', 'description', 'pickup_location']
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return JsonResponse({
+                "error": "Missing required fields",
+                "missing_fields": missing_fields
+            }, status=400)
+
+        category = data.get('category', None)
+        valid, error, valid_categories = validate_category(category)
+        if not valid:
+            return JsonResponse({
+                "error": error,
+                "options": valid_categories
+            }, status=400)
+        
+
+        location = data['pickup_location']
+        valid, error = validate_coordinates(location)
+        if not valid:
+            return JsonResponse({
+                "error": error
+            }, status=400)
+            
+        pickup_location = Point(location['longitude'], location['latitude'])
+        
+        try:
+            weight = data.get('weight')
+            if weight is not None:
+                weight = float(weight)
+                if weight <= 0:
+                    return JsonResponse({"error": "Weight must be positive"}, status=400)
+            
+            volume = data.get('volume')
+            if volume is not None:
+                volume = float(volume)
+                if volume <= 0:
+                    return JsonResponse({"error": "Volume must be positive"}, status=400)
+        except (ValueError, TypeError):
+            return JsonResponse({
+                "error": "Invalid weight or volume format"
+            }, status=400)
+        
+        # Validate best_before date --------------------> not needed ?
+        best_before = data.get('best_before')
+        if best_before:
+            try:
+                best_before = datetime.strptime(best_before, '%Y-%m-%d').date()
+                if best_before < date.today():
+                    return JsonResponse({
+                        "error": "Best before date cannot be in the past"
+                    }, status=400)
+            except ValueError:
+                return JsonResponse({
+                    "error": "Invalid best_before date format. Use YYYY-MM-DD"
+                }, status=400)
+        
+        # Get the samaritan
+        try:
+            samaritan = Samaritan.objects.get(username=request.username)
+        except Samaritan.DoesNotExist:
+            return JsonResponse({
+                "error": "Samaritan not found"
+            }, status=404)
+        
+        # Create the item
+        item = Item.objects.create(
+            category=category,
+            description=data['description'],
+            pickup_location=pickup_location,
+            posted_by=samaritan,
+            weight=weight if 'weight' in data else None,
+            weight_unit=data.get('weight_unit'),
+            volume=volume if 'volume' in data else None,
+            volume_unit=data.get('volume_unit'),
+            best_before=best_before if best_before else None
+        )
+        
+        return JsonResponse({
+            "message": "Item donated successfully",
+            "item": {
+                "id": item.id,
+                "category": {
+                    "id": item.category,
+                    "name": dict(Item.CATEGORY_CHOICES)[item.category]
+                },
+                "description": item.description,
+                "pickup_location": {
+                    "latitude": item.pickup_location.y,
+                    "longitude": item.pickup_location.x
+                },
+                "posted_by": {
+                    "id": samaritan.id,
+                    "username": samaritan.username
+                },
+                "weight": {
+                    "value": float(item.weight),
+                    "unit": item.weight_unit
+                } if item.weight is not None else None,
+                "volume": {
+                    "value": float(item.volume),
+                    "unit": item.volume_unit
+                } if item.volume is not None else None,
+                "best_before": item.best_before.isoformat() if item.best_before else None,
+                "created_at": item.created_at.isoformat() if hasattr(item, 'created_at') else None
+            }
+        }, status=201)
+        
+    except Exception as e:
+        return JsonResponse({
+            "error": f"Internal server error: {str(e)}"
+        }, status=500)
+    
+@csrf_exempt
+@token_required()
+def get_item_listings_for_organizations(request):
+
+    if request.user_type != 'organization':
+        return JsonResponse({"error": "forbidden for samaritans"}, status=403)
+    
+    try:
+        organization = Organization.objects.get(username=request.username)
+        if not organization.location:
+            return JsonResponse({"error": "Organization location not set"}, status=400)
+        
+        try:
+            items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 10)))
+            if items_per_page <= 0:
+                return JsonResponse({"error": "Items per page must be positive"}, status=400)
+        except ValueError:
+            return JsonResponse({"error": "Invalid items_per_page parameter"}, status=400)
+            
+        try:
+            page_number = int(request.GET.get('page', 1))
+            if page_number <= 0:
+                return JsonResponse({"error": "Page number must be positive"}, status=400)
+        except ValueError:
+            return JsonResponse({"error": "Invalid page number"}, status=400)
+        
+        try:
+            radius_km = float(request.GET.get('radius', os.getenv('DEFAULT_RADIUS', 5)))
+            if radius_km <= 0:
+                return JsonResponse({"error": "Radius must be positive"}, status=400)
+            radius_m = radius_km * 1000
+        except ValueError:
+            return JsonResponse({"error": "Invalid radius parameter"}, status=400)
+        
+        try:
+            category = request.GET.get('category')
+            if category is not None:
+                category = int(category)
+                valid_categories = dict(Item.CATEGORY_CHOICES).keys()
+                if category not in valid_categories:
+                    return JsonResponse({
+                        "error": "Invalid category",
+                        "valid_categories": dict(Item.CATEGORY_CHOICES)
+                    }, status=400)
+        except ValueError:
+            return JsonResponse({
+                "error": "Category must be a number",
+                "valid_categories": dict(Item.CATEGORY_CHOICES)
+            }, status=400)
+        
+        queryset = Item.objects.filter(
+            reserved_by__isnull=True,
+            is_picked_up=False,
+            reserved_till__isnull=True
+        )
+
+        if category is not None:
+            queryset = queryset.filter(category=category)
+        
+        try:
+            queryset = Item.objects.filter(pickup_location__distance_lte=(organization.location, D(m=radius_m)))
+
+            queryset = queryset.annotate(
+                distance=DistanceDBFunction('pickup_location', organization.location)
+            ).order_by('distance')
+
+        except Exception as e:
+            print(f"Spatial query error: {str(e)}")
+            raise Exception(f"Error processing location query: {str(e)}")
+        
+        try:
+            paginator = Paginator(queryset, items_per_page)
+            if page_number > paginator.num_pages and paginator.num_pages > 0:
+                return JsonResponse({"error": "Page number exceeds available pages"}, status=404)
+            page_obj = paginator.get_page(page_number)
+        except Exception as e:
+            return JsonResponse({"error": f"Pagination error: {str(e)}"}, status=500)
+        
+        print("Pagination Complete")
+        
+        items_data = []
+        for item in page_obj:
+            try:
+                item_data = {
+                    'id': item.id,
+                    'category': {
+                        'id': item.category,
+                        'name': dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    'description': item.description,
+                    'pickup_location': {
+                        'latitude': item.pickup_location.y,
+                        'longitude': item.pickup_location.x
+                    },
+                    'distance_km': round(item.distance.km, 2) if hasattr(item, 'distance') else None,
+                    'posted_by': {
+                        'id': item.posted_by.id,
+                        'username': item.posted_by.username
+                    }
+                }
+                
+                if item.weight is not None:
+                    item_data['weight'] = {
+                        'value': float(item.weight),
+                        'unit': item.weight_unit
+                    }
+                
+                if item.volume is not None:
+                    item_data['volume'] = {
+                        'value': float(item.volume),
+                        'unit': item.volume_unit
+                    }
+                
+                if item.best_before is not None:
+                    item_data['best_before'] = item.best_before.isoformat()
+                
+                if item.pickup_time is not None:
+                    item_data['pickup_time'] = item.pickup_time.isoformat()
+                
+                items_data.append(item_data)
+                
+            except Exception as e:
+                return JsonResponse({
+                    "error": f"Error processing item data: {str(e)}"
+                }, status=500)
+        
+        return JsonResponse({
+            "page": page_number,
+            "total_pages": paginator.num_pages,
+            "total_items": paginator.count,
+            "items": items_data,
+            "categories": dict(Item.CATEGORY_CHOICES)
+        }, status=200)
+        
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
 
 
 class ItemView(View):
     @staticmethod
     def get(request):
-        #TODO: Get radius and items per page from environment or default values
-        radius_km = float(request.GET.get('radius', os.getenv('DEFAULT_RADIUS', 5)))
-        items_per_page = int(os.getenv('ITEMS_PER_PAGE', 10))
-        category = request.GET.get('category')
-        weight_min = request.GET.get('weight_min')
-        weight_max = request.GET.get('weight_max')
-        page_number = request.GET.get('page', 1)
-
-        #TODO: Get the organization based on the logged-in user
         try:
             organization = Organization.objects.get(id=request.user.id)
             if not organization.location:
                 return JsonResponse({"error": "Organization location is not available"}, status=400)
         except Organization.DoesNotExist:
             return JsonResponse({"error": "Organization not found"}, status=404)
+        
+        items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 10)))
+        page_number = request.GET.get('page', 1)
 
+        radius_km = float(request.GET.get('radius', os.getenv('DEFAULT_RADIUS', 5)))
+        category = request.GET.get('category')
+    
         radius_m = radius_km * 1000
 
         queryset = Item.objects.filter(reserved_by__isnull=True)
         if category:
             queryset = queryset.filter(category=category)
-        if weight_min:
-            queryset = queryset.filter(weight__gte=weight_min)
-        if weight_max:
-            queryset = queryset.filter(weight__lte=weight_max)
 
         queryset = queryset.filter(
             pickup_location__distance_lte=(organization.location, radius_m)
