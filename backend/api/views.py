@@ -9,6 +9,7 @@ from django.contrib.gis.db.models.functions import Distance as DistanceDBFunctio
 
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
@@ -476,7 +477,7 @@ def get_item_listings_for_organizations(request):
             return JsonResponse({"error": "Organization location not set"}, status=400)
         
         try:
-            items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 10)))
+            items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 25)))
             if items_per_page <= 0:
                 return JsonResponse({"error": "Items per page must be positive"}, status=400)
         except ValueError:
@@ -593,8 +594,7 @@ def get_item_listings_for_organizations(request):
             "page": page_number,
             "total_pages": paginator.num_pages,
             "total_items": paginator.count,
-            "items": items_data,
-            "categories": dict(Item.CATEGORY_CHOICES)
+            "items": items_data
         }, status=200)
         
     except Organization.DoesNotExist:
@@ -603,95 +603,350 @@ def get_item_listings_for_organizations(request):
         return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
 
 
-class ItemView(View):
-    @staticmethod
-    def get(request):
+@token_required()
+def get_samaritan_items(request, username):
+    if request.user_type != 'samaritan':
+        return JsonResponse({"error": "forbidden for organizations"}, status=403)
+
+    try:
         try:
-            organization = Organization.objects.get(id=request.user.id)
-            if not organization.location:
-                return JsonResponse({"error": "Organization location is not available"}, status=400)
-        except Organization.DoesNotExist:
-            return JsonResponse({"error": "Organization not found"}, status=404)
+            items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 25)))
+            if items_per_page <= 0:
+                return JsonResponse({"error": "Items per page must be positive"}, status=400)
+        except ValueError:
+            return JsonResponse({"error": "Invalid items_per_page parameter"}, status=400)
         
-        items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 10)))
-        page_number = request.GET.get('page', 1)
+        try:
+            page_number = int(request.GET.get('page', 1))
+            if page_number <= 0:
+                return JsonResponse({"error": "Page number must be positive"}, status=400)
+        except ValueError:
+            return JsonResponse({"error": "Invalid page number"}, status=400)
 
-        radius_km = float(request.GET.get('radius', os.getenv('DEFAULT_RADIUS', 5)))
-        category = request.GET.get('category')
-    
-        radius_m = radius_km * 1000
+        try:
+            samaritan = Samaritan.objects.get(user__username=request.username)
+        except Samaritan.DoesNotExist:
+            return JsonResponse({"error": "Samaritan not found"}, status=404)
 
-        queryset = Item.objects.filter(reserved_by__isnull=True)
-        if category:
-            queryset = queryset.filter(category=category)
+        # Get category filter if provided
+        try:
+            category = request.GET.get('category')
+            if category is not None:
+                category = int(category)
+                valid_categories = dict(Item.CATEGORY_CHOICES).keys()
+                if category not in valid_categories:
+                    return JsonResponse({
+                        "error": "Invalid category",
+                        "valid_categories": dict(Item.CATEGORY_CHOICES)
+                    }, status=400)
+        except ValueError:
+            return JsonResponse({
+                "error": "Category must be a number",
+                "valid_categories": dict(Item.CATEGORY_CHOICES)
+            }, status=400)
 
-        queryset = queryset.filter(
-            pickup_location__distance_lte=(organization.location, radius_m)
-        ).annotate(
-            distance=Distance("pickup_location", organization.location)
-        ).order_by("distance")
+        all_items = Item.objects.filter(posted_by=samaritan)
+        if category is not None:
+            all_items = all_items.filter(category=category)
 
-        paginator = Paginator(queryset, items_per_page)
-        page_obj = paginator.get_page(page_number)
+        picked_up_items = all_items.filter(is_picked_up=True)
+        not_picked_up_items = all_items.filter(is_picked_up=False)
 
-        items_data = [
-            {
-                "id": item.id,
-                "category": item.category,
-                "description": item.description,
-                "weight": item.weight,
-                "weight_unit": item.weight_unit,
-                "volume": item.volume,
-                "volume_unit": item.volume_unit,
-                "best_before": item.best_before,
-                "pickup_location": {
-                    "latitude": item.pickup_location.y,
-                    "longitude": item.pickup_location.x
-                },
-                "distance_km": round(item.distance.km, 2),
-                "reserved_till": item.reserved_till,
-                "posted_by": item.posted_by.id,
-                "pickup_time": item.pickup_time,
-                "is_picked_up": item.is_picked_up,
-            }
-            for item in page_obj
-        ]
+        try:
+            picked_up_paginator = Paginator(picked_up_items, items_per_page)
+            not_picked_up_paginator = Paginator(not_picked_up_items, items_per_page)
+            
+            if  (page_number > picked_up_paginator.num_pages and picked_up_paginator.num_pages > 0) or \
+                (page_number > not_picked_up_paginator.num_pages and not_picked_up_paginator.num_pages > 0):
+                return JsonResponse({"error": "Page number exceeds available pages"}, status=404)
+            
+            picked_up_page = picked_up_paginator.get_page(page_number)
+            not_picked_up_page = not_picked_up_paginator.get_page(page_number)
+        except Exception as e:
+            return JsonResponse({"error": f"Pagination error: {str(e)}"}, status=500)
 
-        return JsonResponse({
+        picked_up_data = []
+        not_picked_up_data = []
+
+        for item in picked_up_page:
+            try:
+                item_data = {
+                    'id': item.id,
+                    'category': {
+                        'id': item.category,
+                        'name': dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    'description': item.description,
+                    'pickup_location': {
+                        'latitude': item.pickup_location.y,
+                        'longitude': item.pickup_location.x
+                    },
+                    'picked_up_by': {
+                        'id': item.picked_up_by.id,
+                        'name': item.picked_up_by.name
+                    } if item.picked_up_by else None,
+                    'scheduled_pickup_time': item.scheduled_pickup_time.isoformat() if item.scheduled_pickup_time else None
+                }
+
+                if item.weight is not None:
+                    item_data['weight'] = {
+                        'value': float(item.weight),
+                        'unit': item.weight_unit
+                    }
+
+                if item.volume is not None:
+                    item_data['volume'] = {
+                        'value': float(item.volume),
+                        'unit': item.volume_unit
+                    }
+
+                if item.best_before is not None:
+                    item_data['best_before'] = item.best_before.isoformat()
+
+                picked_up_data.append(item_data)
+
+            except Exception as e:
+                return JsonResponse({
+                    "error": f"Error processing picked up item data: {str(e)}"
+                }, status=500)
+
+        for item in not_picked_up_page:
+            try:
+                item_data = {
+                    'id': item.id,
+                    'category': {
+                        'id': item.category,
+                        'name': dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    'description': item.description,
+                    'pickup_location': {
+                        'latitude': item.pickup_location.y,
+                        'longitude': item.pickup_location.x
+                    },
+                    'is_reserved': item.is_reserved,
+                    'reserved_by': {
+                        'id': item.reserved_by.id,
+                        'name': item.reserved_by.name
+                    } if item.reserved_by else None,
+                    'reserved_till': item.reserved_till.isoformat() if item.reserved_till else None
+                }
+
+                if item.weight is not None:
+                    item_data['weight'] = {
+                        'value': float(item.weight),
+                        'unit': item.weight_unit
+                    }
+
+                if item.volume is not None:
+                    item_data['volume'] = {
+                        'value': float(item.volume),
+                        'unit': item.volume_unit
+                    }
+
+                if item.best_before is not None:
+                    item_data['best_before'] = item.best_before.isoformat()
+
+                not_picked_up_data.append(item_data)
+
+            except Exception as e:
+                return JsonResponse({
+                    "error": f"Error processing not picked up item data: {str(e)}"
+                }, status=500)
+
+        response_data = {
             "page": page_number,
-            "total_pages": paginator.num_pages,
-            "total_items": paginator.count,
-            "items": items_data
-        }, status=200)
+            "picked_up_items": {
+                "total_pages": picked_up_paginator.num_pages,
+                "total_items": picked_up_paginator.count,
+                "items": picked_up_data
+            },
+            "not_picked_up_items": {
+                "total_pages": not_picked_up_paginator.num_pages,
+                "total_items": not_picked_up_paginator.count,
+                "items": not_picked_up_data
+            }
+        }
 
-    @staticmethod
-    def post(request):
+        return JsonResponse(response_data, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
+
+@token_required()
+def get_organization_items(request):
+    if request.user_type != 'organization':
+        return JsonResponse({"error": "forbidden for samaritans"}, status=403)
+
+    try:
         try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+            items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 10)))
+            if items_per_page <= 0:
+                return JsonResponse({"error": "Items per page must be positive"}, status=400)
+        except ValueError:
+            return JsonResponse({"error": "Invalid items_per_page parameter"}, status=400)
+        
+        try:
+            page_number = int(request.GET.get('page', 1))
+            if page_number <= 0:
+                return JsonResponse({"error": "Page number must be positive"}, status=400)
+        except ValueError:
+            return JsonResponse({"error": "Invalid page number"}, status=400)
 
         try:
-            organization = Organization.objects.get(id=request.user.id)
+            organization = Organization.objects.get(user__username=request.user.username)
         except Organization.DoesNotExist:
             return JsonResponse({"error": "Organization not found"}, status=404)
 
-        item = Item(
-            category = data.get("category"),
-            description = data.get("description"),
-            weight = data.get("weight"),
-            weight_unit = data.get("weight_unit"),
-            volume = data.get("volume"),
-            volume_unit = data.get("volume_unit"),
-            best_before = data.get("best_before"),
-            pickup_location = Point(data.get("longitude"), data.get("latitude")),
-            posted_by = organization,
-            pickup_time = data.get("pickup_time"),
-            is_picked_up = False
-        )
+        try:
+            category = request.GET.get('category')
+            if category is not None:
+                category = int(category)
+                valid_categories = dict(Item.CATEGORY_CHOICES).keys()
+                if category not in valid_categories:
+                    return JsonResponse({
+                        "error": "Invalid category",
+                        "valid_categories": dict(Item.CATEGORY_CHOICES)
+                    }, status=400)
+        except ValueError:
+            return JsonResponse({
+                "error": "Category must be a number",
+                "valid_categories": dict(Item.CATEGORY_CHOICES)
+            }, status=400)
+
+        reserved_items = Item.objects.filter(
+            reserved_by=organization,
+            is_picked_up=False
+        ).order_by('-reserved_till')
+
+        picked_up_items = Item.objects.filter(
+            picked_up_by=organization,
+            is_picked_up=True
+        ).order_by('-scheduled_pickup_time')
+
+        if category is not None:
+            reserved_items = reserved_items.filter(category=category)
+            picked_up_items = picked_up_items.filter(category=category)
 
         try:
-            item.save()
-            return JsonResponse({"success": "Item created successfully", "item_id": item.id}, status=201)
+            reserved_paginator = Paginator(reserved_items, items_per_page)
+            picked_up_paginator = Paginator(picked_up_items, items_per_page)
+            
+            if (page_number > reserved_paginator.num_pages and reserved_paginator.num_pages > 0) or \
+               (page_number > picked_up_paginator.num_pages and picked_up_paginator.num_pages > 0):
+                return JsonResponse({"error": "Page number exceeds available pages"}, status=404)
+            
+            reserved_page = reserved_paginator.get_page(page_number)
+            picked_up_page = picked_up_paginator.get_page(page_number)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({"error": f"Pagination error: {str(e)}"}, status=500)
+
+        reserved_data = []
+        for item in reserved_page:
+            try:
+                item_data = {
+                    'id': item.id,
+                    'category': {
+                        'id': item.category,
+                        'name': dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    'description': item.description,
+                    'pickup_location': {
+                        'latitude': item.pickup_location.y,
+                        'longitude': item.pickup_location.x
+                    },
+                    'posted_by': {
+                        'id': item.posted_by.id,
+                        'username': item.posted_by.user.username
+                    },
+                    'reserved_till': item.reserved_till.isoformat() if item.reserved_till else None
+                }
+
+                if item.weight is not None:
+                    item_data['weight'] = {
+                        'value': float(item.weight),
+                        'unit': item.weight_unit
+                    }
+
+                if item.volume is not None:
+                    item_data['volume'] = {
+                        'value': float(item.volume),
+                        'unit': item.volume_unit
+                    }
+
+                if item.best_before is not None:
+                    item_data['best_before'] = item.best_before.isoformat()
+
+                if hasattr(item, 'distance'):
+                    item_data['distance_km'] = round(item.distance.km, 2)
+
+                reserved_data.append(item_data)
+
+            except Exception as e:
+                return JsonResponse({
+                    "error": f"Error processing reserved item data: {str(e)}"
+                }, status=500)
+
+        picked_up_data = []
+        for item in picked_up_page:
+            try:
+                item_data = {
+                    'id': item.id,
+                    'category': {
+                        'id': item.category,
+                        'name': dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    'description': item.description,
+                    'pickup_location': {
+                        'latitude': item.pickup_location.y,
+                        'longitude': item.pickup_location.x
+                    },
+                    'posted_by': {
+                        'id': item.posted_by.id,
+                        'username': item.posted_by.user.username
+                    },
+                    'scheduled_pickup_time': item.scheduled_pickup_time.isoformat() if item.scheduled_pickup_time else None
+                }
+
+                if item.weight is not None:
+                    item_data['weight'] = {
+                        'value': float(item.weight),
+                        'unit': item.weight_unit
+                    }
+
+                if item.volume is not None:
+                    item_data['volume'] = {
+                        'value': float(item.volume),
+                        'unit': item.volume_unit
+                    }
+
+                if item.best_before is not None:
+                    item_data['best_before'] = item.best_before.isoformat()
+
+                if hasattr(item, 'distance'):
+                    item_data['distance_km'] = round(item.distance.km, 2)
+
+                picked_up_data.append(item_data)
+
+            except Exception as e:
+                return JsonResponse({
+                    "error": f"Error processing picked up item data: {str(e)}"
+                }, status=500)
+
+        response_data = {
+            "page": page_number,
+            "reserved_items": {
+                "total_pages": reserved_paginator.num_pages,
+                "total_items": reserved_paginator.count,
+                "items": reserved_data
+            },
+            "picked_up_items": {
+                "total_pages": picked_up_paginator.num_pages,
+                "total_items": picked_up_paginator.count,
+                "items": picked_up_data
+            }
+        }
+
+        return JsonResponse(response_data, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
