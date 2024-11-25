@@ -1,14 +1,15 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { apiDomain } from "./Config";
 
 const Samaritan = () => {
     const navigate = useNavigate();
 
     const handleLogout = async () => {
         try {
-            const response = await fetch("http://localhost:8080/auth/logout", {
+            const response = await fetch(`${apiDomain}/auth/logout`, {
                 method: "POST",
-                credentials: "include", // Ensure cookies are sent with the request
+                credentials: "include",
             });
     
             console.log("Logout Response:", response); // Debugging log
