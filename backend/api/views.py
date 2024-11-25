@@ -4,7 +4,9 @@ import json
 import re
 
 from django.contrib.gis.geos import Point
-from django.contrib.gis.measure import Distance
+from django.contrib.gis.measure import D, Distance 
+from django.contrib.gis.db.models.functions import Distance as DistanceDBFunction
+
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views import View
@@ -316,6 +318,16 @@ def logout(request):
 
 
 #------------------------------------------------- App Views -------------------------------------------------#
+@csrf_exempt
+@token_required()
+def get_categories(request):
+    try:
+        categories = dict(Item.CATEGORY_CHOICES)
+        return JsonResponse({
+            "options" : categories
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
 @token_required()
@@ -345,20 +357,6 @@ def donate_item(request):
                 "error": "Missing required fields",
                 "missing_fields": missing_fields
             }, status=400)
-        
-        # try:
-        #     category = int(data['category'])
-        #     valid_categories = dict(Item.CATEGORY_CHOICES).keys()
-        #     if category not in valid_categories:
-        #         return JsonResponse({
-        #             "error": "Invalid category",
-        #             "valid_categories": dict(Item.CATEGORY_CHOICES)
-        #         }, status=400)
-        # except (ValueError, TypeError):
-        #     return JsonResponse({
-        #         "error": "Category must be a number",
-        #         "valid_categories": dict(Item.CATEGORY_CHOICES)
-        #     }, status=400)
 
         category = data.get('category', None)
         valid, error, valid_categories = validate_category(category)
@@ -464,6 +462,145 @@ def donate_item(request):
         return JsonResponse({
             "error": f"Internal server error: {str(e)}"
         }, status=500)
+    
+@csrf_exempt
+@token_required()
+def get_item_listings_for_organizations(request):
+
+    if request.user_type != 'organization':
+        return JsonResponse({"error": "forbidden for samaritans"}, status=403)
+    
+    try:
+        organization = Organization.objects.get(username=request.username)
+        if not organization.location:
+            return JsonResponse({"error": "Organization location not set"}, status=400)
+        
+        try:
+            items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 10)))
+            if items_per_page <= 0:
+                return JsonResponse({"error": "Items per page must be positive"}, status=400)
+        except ValueError:
+            return JsonResponse({"error": "Invalid items_per_page parameter"}, status=400)
+            
+        try:
+            page_number = int(request.GET.get('page', 1))
+            if page_number <= 0:
+                return JsonResponse({"error": "Page number must be positive"}, status=400)
+        except ValueError:
+            return JsonResponse({"error": "Invalid page number"}, status=400)
+        
+        try:
+            radius_km = float(request.GET.get('radius', os.getenv('DEFAULT_RADIUS', 5)))
+            if radius_km <= 0:
+                return JsonResponse({"error": "Radius must be positive"}, status=400)
+            radius_m = radius_km * 1000
+        except ValueError:
+            return JsonResponse({"error": "Invalid radius parameter"}, status=400)
+        
+        try:
+            category = request.GET.get('category')
+            if category is not None:
+                category = int(category)
+                valid_categories = dict(Item.CATEGORY_CHOICES).keys()
+                if category not in valid_categories:
+                    return JsonResponse({
+                        "error": "Invalid category",
+                        "valid_categories": dict(Item.CATEGORY_CHOICES)
+                    }, status=400)
+        except ValueError:
+            return JsonResponse({
+                "error": "Category must be a number",
+                "valid_categories": dict(Item.CATEGORY_CHOICES)
+            }, status=400)
+        
+        queryset = Item.objects.filter(
+            reserved_by__isnull=True,
+            is_picked_up=False,
+            reserved_till__isnull=True
+        )
+
+        if category is not None:
+            queryset = queryset.filter(category=category)
+        
+        try:
+            queryset = Item.objects.filter(pickup_location__distance_lte=(organization.location, D(m=radius_m)))
+
+            queryset = queryset.annotate(
+                distance=DistanceDBFunction('pickup_location', organization.location)
+            ).order_by('distance')
+
+        except Exception as e:
+            print(f"Spatial query error: {str(e)}")
+            raise Exception(f"Error processing location query: {str(e)}")
+        
+        try:
+            paginator = Paginator(queryset, items_per_page)
+            if page_number > paginator.num_pages and paginator.num_pages > 0:
+                return JsonResponse({"error": "Page number exceeds available pages"}, status=404)
+            page_obj = paginator.get_page(page_number)
+        except Exception as e:
+            return JsonResponse({"error": f"Pagination error: {str(e)}"}, status=500)
+        
+        print("Pagination Complete")
+        
+        items_data = []
+        for item in page_obj:
+            try:
+                item_data = {
+                    'id': item.id,
+                    'category': {
+                        'id': item.category,
+                        'name': dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    'description': item.description,
+                    'pickup_location': {
+                        'latitude': item.pickup_location.y,
+                        'longitude': item.pickup_location.x
+                    },
+                    'distance_km': round(item.distance.km, 2) if hasattr(item, 'distance') else None,
+                    'posted_by': {
+                        'id': item.posted_by.id,
+                        'username': item.posted_by.username
+                    }
+                }
+                
+                if item.weight is not None:
+                    item_data['weight'] = {
+                        'value': float(item.weight),
+                        'unit': item.weight_unit
+                    }
+                
+                if item.volume is not None:
+                    item_data['volume'] = {
+                        'value': float(item.volume),
+                        'unit': item.volume_unit
+                    }
+                
+                if item.best_before is not None:
+                    item_data['best_before'] = item.best_before.isoformat()
+                
+                if item.pickup_time is not None:
+                    item_data['pickup_time'] = item.pickup_time.isoformat()
+                
+                items_data.append(item_data)
+                
+            except Exception as e:
+                return JsonResponse({
+                    "error": f"Error processing item data: {str(e)}"
+                }, status=500)
+        
+        return JsonResponse({
+            "page": page_number,
+            "total_pages": paginator.num_pages,
+            "total_items": paginator.count,
+            "items": items_data,
+            "categories": dict(Item.CATEGORY_CHOICES)
+        }, status=200)
+        
+    except Organization.DoesNotExist:
+        return JsonResponse({"error": "Organization not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
 
 
 class ItemView(View):
