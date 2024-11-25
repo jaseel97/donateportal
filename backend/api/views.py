@@ -204,16 +204,7 @@ def login(request):
             })
             
             response.set_cookie(
-                key='jwt2',
-                value=token,
-                httponly=True,
-                secure=False,
-                samesite='Lax',
-                max_age=24 * 60 * 60
-            )
-
-            response.set_cookie(
-                key='jwt1',
+                key='jwt',
                 value=token,
                 httponly=True,
                 secure=False,
