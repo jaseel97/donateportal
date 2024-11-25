@@ -66,7 +66,7 @@ const DonationHistory = ({ donations, categories }) => {
   };
 
   return (
-    <div className="w-1/3 bg-white p-6 rounded-lg shadow-sm">
+    <div className="w-full bg-white p-6 rounded-lg shadow-sm">
       <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Donation history</h2>
       <p className="text-sm text-center text-gray-500 mb-6">
         Check the status of recent donations

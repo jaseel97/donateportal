@@ -59,7 +59,7 @@ const DonationForm = ({ onSubmit }) => {
   };
 
   return (
-    <div className="flex-1 w-1/2 bg-white p-6 rounded-lg shadow-sm">
+    <div className="flex-1 w-full bg-white p-6 rounded-lg shadow-sm ">
       <form onSubmit={handleSubmit}>
         <div className="space-y-12">
           <div>

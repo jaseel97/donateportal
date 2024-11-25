@@ -4,7 +4,6 @@ export default {
     "./index.html",
     "./src/**/*.{js,jsx,}",
   ],
-  // Enable class-based dark mode
   darkMode: 'class',
   theme: {
     extend: {
@@ -17,10 +16,29 @@ export default {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        slideDown: {
+          '0%': { transform: 'translateY(-20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideInLeft: {
+          '0%': { transform: 'translateX(-20px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        },
+        slideInRight: {
+          '0%': { transform: 'translateX(20px)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' },
+        }
       },
       animation: {
-        slideIn: 'slideIn 0.2s ease-out',
-        fadeIn: 'fadeIn 0.2s ease-out',
+        fadeIn: 'fadeIn 0.5s ease-out',
+        slideDown: 'slideDown 0.5s ease-out',
+        slideUp: 'slideUp 0.5s ease-out',
+        slideInLeft: 'slideInLeft 0.5s ease-out',
+        slideInRight: 'slideInRight 0.5s ease-out'
       },
     },
   },

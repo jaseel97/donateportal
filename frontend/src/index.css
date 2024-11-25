@@ -4,11 +4,11 @@
 
 /* Base input style */
 .base-input-style {
-    @apply relative w-full bg-white py-3 pl-4 pr-10 text-left border-2 border-sky-200 
-    hover:border-sky-400 focus:outline-none focus:border-sky-500 
-    transition-all duration-200 rounded-t-lg;
+    @apply relative w-full bg-white/85 py-3 pl-4 pr-10 text-left border-2 border-indigo-200 
+    hover:bg-gradient-to-r hover:from-white/90 hover:to-indigo-50/90 hover:border-indigo-300 
+    hover:scale-[1.01] hover:shadow-md focus:border-sky-500 
+    transition-all duration-300 rounded-t-lg;
 }
-
 /* Input styles */
 .textareastyle {
     @apply base-input-style;
@@ -41,7 +41,7 @@
 
 .categorylist {
     @apply absolute z-10 mt-1 max-h-60 w-full overflow-auto bg-white py-1 
-    shadow-lg border-2 border-sky-200 focus:outline-none animate-slideIn rounded-t-lg;
+    shadow-lg border-2 border-sky-200 focus:outline-none rounded-t-lg;
 }
 
 .categoryitem {
