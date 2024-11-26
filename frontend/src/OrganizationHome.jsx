@@ -1,229 +1,18 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-const items = [
-    {
-        id: 1,
-        category: 4,
-        description: "Street Cups",
-        weight: "47.90",
-        weightUnit: "lbs",
-        volume: "5.15",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-12T18:24:41.575Z",
-        pickupLocation: "SRID=4326;POINT (-82.55610893308248 42.320471851517986)",
-        postedBy: 53,
-        reservedBy: 45,
-        pickupTime: "2024-11-23T16:45:21.563Z",
-        isPickedUp: true,
-    },
-    {
-        id: 2,
-        category: 1,
-        description: "Moccasin Pants",
-        weight: "78.17",
-        weightUnit: "kg",
-        volume: "2.52",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-02T05:58:56.984Z",
-        pickupLocation: "SRID=4326;POINT (-82.51681392753251 42.236303102428096)",
-        postedBy: 47,
-        reservedBy: 53,
-        pickupTime: "2024-11-24T16:06:28.052Z",
-        isPickedUp: true,
-    },
-    {
-        id: 3,
-        category: 7,
-        description: "Close Supplies",
-        weight: "82.32",
-        weightUnit: "kg",
-        volume: "11.96",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-03T01:10:57.508Z",
-        pickupLocation: "SRID=4326;POINT (-82.65032101593296 42.342786064317814)",
-        postedBy: 54,
-        reservedBy: 53,
-        pickupTime: "2024-12-07T06:37:31.212Z",
-        isPickedUp: true,
-    },
-    {
-        id: 4,
-        category: 1,
-        description: "LawnGreen Sweater",
-        weight: "8.28",
-        weightUnit: "lbs",
-        volume: "40.87",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-11T03:22:55.384Z",
-        pickupLocation: "SRID=4326;POINT (-82.85089528192285 42.14075002820068)",
-        postedBy: 47,
-        reservedBy: 54,
-        pickupTime: "2024-11-27T15:15:01.651Z",
-        isPickedUp: true,
-    },
-    // Additional data provided by user
-    {
-        id: 21,
-        category: 8,
-        description: "Modern Bed",
-        weight: "25.58",
-        weightUnit: "lbs",
-        volume: "41.72",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-14T04:39:31.555Z",
-        pickupLocation: "SRID=4326;POINT (-82.85137820357848 42.04181879672585)",
-        postedBy: 46,
-        reservedBy: 49,
-        pickupTime: "2024-11-25T02:33:20.391Z",
-        isPickedUp: true,
-    },
-    {
-        id: 22,
-        category: 7,
-        description: "Establish First Aid Kit",
-        weight: "80.77",
-        weightUnit: "lbs",
-        volume: "5.79",
-        volumeUnit: "m³",
-        reservedTill: "2024-12-20T17:22:27.168Z",
-        pickupLocation: "SRID=4326;POINT (-82.60422333534984 41.93156221407673)",
-        postedBy: 48,
-        reservedBy: 54,
-        pickupTime: null,
-        isPickedUp: false,
-    },
-    {
-        id: 23,
-        category: 4,
-        description: "Street Cups",
-        weight: "47.90",
-        weightUnit: "lbs",
-        volume: "5.15",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-12T18:24:41.575Z",
-        pickupLocation: "SRID=4326;POINT (-82.55610893308248 42.320471851517986)",
-        postedBy: 53,
-        reservedBy: 45,
-        pickupTime: "2024-11-23T16:45:21.563Z",
-        isPickedUp: true,
-    },
-    {
-        id: 24,
-        category: 1,
-        description: "Moccasin Pants",
-        weight: "78.17",
-        weightUnit: "kg",
-        volume: "2.52",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-02T05:58:56.984Z",
-        pickupLocation: "SRID=4326;POINT (-82.51681392753251 42.236303102428096)",
-        postedBy: 47,
-        reservedBy: 53,
-        pickupTime: "2024-11-24T16:06:28.052Z",
-        isPickedUp: true,
-    },
-    {
-        id: 25,
-        category: 7,
-        description: "Close Supplies",
-        weight: "82.32",
-        weightUnit: "kg",
-        volume: "11.96",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-03T01:10:57.508Z",
-        pickupLocation: "SRID=4326;POINT (-82.65032101593296 42.342786064317814)",
-        postedBy: 54,
-        reservedBy: 53,
-        pickupTime: "2024-12-07T06:37:31.212Z",
-        isPickedUp: true,
-    },
-    {
-        id: 26,
-        category: 1,
-        description: "LawnGreen Sweater",
-        weight: "8.28",
-        weightUnit: "lbs",
-        volume: "40.87",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-11T03:22:55.384Z",
-        pickupLocation: "SRID=4326;POINT (-82.85089528192285 42.14075002820068)",
-        postedBy: 47,
-        reservedBy: 54,
-        pickupTime: "2024-11-27T15:15:01.651Z",
-        isPickedUp: true,
-    },
-    {
-        id: 27,
-        category: 3,
-        description: "Aqua Table",
-        weight: "81.88",
-        weightUnit: "lbs",
-        volume: "46.69",
-        volumeUnit: "ft³",
-        reservedTill: "2024-11-24T04:09:13.880Z",
-        pickupLocation: "SRID=4326;POINT (-82.8882830007884 42.117285768496984)",
-        postedBy: 54,
-        reservedBy: 45,
-        pickupTime: null,
-        isPickedUp: false,
-    },
-    {
-        id: 28,
-        category: 0,
-        description: "Bit Rice",
-        weight: "3.09",
-        weightUnit: "kg",
-        volume: "39.14",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-16T06:02:49.879Z",
-        pickupLocation: "SRID=4326;POINT (-82.86889648767513 42.39228868224104)",
-        postedBy: 48,
-        reservedBy: 51,
-        pickupTime: "2024-12-07T02:48:50.035Z",
-        isPickedUp: true,
-    },
-    {
-        id: 29,
-        category: 5,
-        description: "Castro Ltd Tablet",
-        weight: "87.95",
-        weightUnit: "kg",
-        volume: "45.50",
-        volumeUnit: "ft³",
-        reservedTill: "2024-12-13T17:48:15.632Z",
-        pickupLocation: "SRID=4326;POINT (-82.50390828686227 42.31730048460234)",
-        postedBy: 52,
-        reservedBy: 48,
-        pickupTime: "2024-11-25T08:50:18.359Z",
-        isPickedUp: true,
-    },
-];
-
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Radius of the Earth in kilometers
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in kilometers
-}
-
 function OrganizationHome() {
-    const organizationLocation = { lat: 42.3173, lon: -82.5039 };
-
     const [filter, setFilter] = useState("");
     const [search, setSearch] = useState("");
     const [pickupDate, setPickupDate] = useState("");
     const [proximityFilter, setProximityFilter] = useState("");
-    const [categories, setCategories] = useState({}); // Store fetched categories
+    const [categories, setCategories] = useState({});
+    const [items, setItems] = useState([]);
     const [selectedItem, setSelectedItem] = useState(null);
     const [isModalOpen, setModalOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(12);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -242,31 +31,67 @@ function OrganizationHome() {
         fetchCategories();
     }, []);
 
+    const fetchItems = async (page = 1, perPage = 12, radius = "", category = "") => {
+        try {
+            const params = {
+                page,
+                items_per_page: perPage,
+                ...(radius && { radius }),
+                ...(category && { category }),
+            };
+
+            const response = await axios.get("http://localhost:8080/listings", {
+                params,
+                headers: {
+                    Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IlRhbmdvRGphbmdvIiwiZW1haWwiOiJ0YW5nb0BkamFuZ28uY2EiLCJpc19zdGFmZiI6ZmFsc2UsInVzZXJfdHlwZSI6Im9yZ2FuaXphdGlvbiIsImV4cCI6MTczNTA5Mjc4OX0.Us5JB1L6Zh3rhPSxTYUvCzYIk-G8JHcYCPSohuhI1VM"
+                }
+            });
+            const mappedItems = response.data.items.map(item => ({
+                id: item.id,
+                category: item.category?.id,
+                description: item?.description,
+                weight: item.weight?.value,
+                weightUnit: item.weight?.unit,
+                volume: item.volume?.value,
+                volumeUnit: item.volume?.unit,
+                pickupLocation: `SRID=4326;POINT (${item.pickup_location?.longitude} ${item.pickup_location?.latitude})`,
+                postedBy: item.posted_by?.id,
+                distanceKm: item?.distance_km,
+                bestBefore: item?.best_before
+            }));
+            setItems(mappedItems);
+            setTotalPages(response.data.total_pages);
+        } catch (error) {
+            console.error("Error fetching items:", error);
+        }
+    };
+
+    useEffect(() => {
+        const selectedCategory = filter === "" ? "" : filter;
+        fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
+    }, [currentPage, itemsPerPage, proximityFilter, filter]);
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
     const proximityOptions = [
         { label: "All", value: "" },
         { label: "5 km", value: 5 },
         { label: "10 km", value: 10 },
         { label: "20 km", value: 20 },
+        { label: "50 km", value: 50 },
     ];
 
     const filteredItems = items.filter((item) => {
-        const matchesCategory = filter ? item.category.toString() === filter : true;
         const matchesSearch = item.description.toLowerCase().includes(search.toLowerCase());
         const matchesDate = pickupDate
-            ? new Date(item.pickupTime).toISOString().split("T")[0] === pickupDate
+            ? new Date(item.bestBefore).toISOString().split("T")[0] === pickupDate
             : true;
 
-        const [_, pickupLon, pickupLat] = item.pickupLocation.match(/POINT \((-?\d+.\d+) (-?\d+.\d+)\)/);
-        const distance = calculateDistance(
-            organizationLocation.lat,
-            organizationLocation.lon,
-            parseFloat(pickupLat),
-            parseFloat(pickupLon)
-        );
-
-        const matchesProximity = proximityFilter ? distance <= proximityFilter : true;
-
-        return matchesCategory && matchesSearch && matchesDate && matchesProximity;
+        return matchesSearch && matchesDate;
     });
 
     const openModal = (item) => {
@@ -381,8 +206,32 @@ function OrganizationHome() {
                         <p className="text-sm text-gray-600">
                             <strong>Volume:</strong> {item.volume} {item.volumeUnit}
                         </p>
+                        <p className="text-sm text-gray-600">
+                            <strong>Distance:</strong> {item.distanceKm} Km
+                        </p>
                     </div>
                 ))}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex justify-between items-center mt-6">
+                <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-gray-300 rounded-md"
+                >
+                    Previous
+                </button>
+                <span>
+                    Page {currentPage} of {totalPages}
+                </span>
+                <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 bg-gray-300 rounded-md"
+                >
+                    Next
+                </button>
             </div>
 
             {/* Modal */}
@@ -392,34 +241,37 @@ function OrganizationHome() {
                     onClick={closeModal}
                 >
                     <div
-                        className="bg-white p-6 rounded-lg w-full max-w-md"
+                        className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h2 className="text-2xl font-bold mb-4">{selectedItem.description}</h2>
-                        <p className="text-lg mb-2">
+                        <h2 className="text-xl font-bold mb-4">{selectedItem.description}</h2>
+                        <p>
                             <strong>Category:</strong> {categories[selectedItem.category] || "Unknown"}
                         </p>
-                        <p className="text-lg mb-2">
+                        <p>
                             <strong>Weight:</strong> {selectedItem.weight} {selectedItem.weightUnit}
                         </p>
-                        <p className="text-lg mb-2">
+                        <p>
                             <strong>Volume:</strong> {selectedItem.volume} {selectedItem.volumeUnit}
                         </p>
-                        <p className="text-lg mb-4">
-                            <strong>Pickup Date:</strong> {new Date(selectedItem.pickupTime).toLocaleDateString()}
+                        <p>
+                            <strong>Distance:</strong> {selectedItem.distanceKm} Km
                         </p>
-                        <div className="flex justify-end gap-4">
-                            <button
-                                onClick={handleReserve}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                            >
-                                Reserve Item
-                            </button>
+                        <p>
+                            <strong>Best Before:</strong> {new Date(selectedItem.bestBefore).toLocaleDateString("en-GB")}
+                        </p>
+                        <div className="flex justify-end mt-6">
                             <button
                                 onClick={handleCancel}
-                                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                                className="px-4 py-2 mr-2 bg-gray-300 rounded-md"
                             >
                                 Cancel
+                            </button>
+                            <button
+                                onClick={handleReserve}
+                                className="px-4 py-2 bg-green-500 text-white rounded-md"
+                            >
+                                Reserve
                             </button>
                         </div>
                     </div>
