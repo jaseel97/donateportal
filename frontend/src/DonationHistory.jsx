@@ -4,9 +4,9 @@ import ProgressBar from './ProgressBar';
 
 const StatusBadge = ({ status }) => {
   const statusStyles = {
-    'Donation Offered': 'bg-green-100 text-green-800',
-    'Reserved': 'bg-red-100 text-red-800',
-    'Picked Up': 'bg-blue-100 text-blue-800'
+    'delivered': 'bg-green-100 text-green-800',
+    'cancelled': 'bg-red-100 text-red-800',
+    'out-for-delivery': 'bg-blue-100 text-blue-800'
   };
 
   return (
@@ -49,10 +49,15 @@ const Modal = ({ isOpen, onClose, children }) => {
 const DonationHistory = ({ donations, categories }) => {
   const [selectedItem, setSelectedItem] = React.useState(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [clickedId, setClickedId] = React.useState(null);
 
   const openItemDetails = (item) => {
+    setClickedId(item.id);
     setSelectedItem(item);
-    setIsModalOpen(true);
+    // Delay modal opening for animation
+    setTimeout(() => {
+      setIsModalOpen(true);
+    }, 300);
   };
 
   const formatDate = (dateString) => {
@@ -65,9 +70,66 @@ const DonationHistory = ({ donations, categories }) => {
     });
   };
 
+  // Add these styles for animations
+  const styleTag = (
+    <style>
+      {`
+        @keyframes cardClick {
+          0% { transform: scale(1); }
+          50% { transform: scale(0.95); }
+          100% { transform: scale(1); }
+        }
+
+        @keyframes cardGlow {
+          0% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+          50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+          100% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+        }
+
+        @keyframes cardSlide {
+          0% { transform: translateX(0); }
+          50% { transform: translateX(-5px); }
+          100% { transform: translateX(0); }
+        }
+
+        .card-click-animation {
+          animation: cardClick 0.3s ease-in-out;
+        }
+
+        .card-glow-animation {
+          animation: cardGlow 0.5s ease-in-out;
+        }
+
+        .card-slide-animation {
+          animation: cardSlide 0.3s ease-in-out;
+        }
+
+        .donation-card {
+          transition: all 0.3s ease;
+        }
+
+        .donation-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .donation-card:active {
+          transform: scale(0.98);
+        }
+      `}
+    </style>
+  );
+
+  const getRandomAnimation = (id) => {
+    if (id !== clickedId) return '';
+    const animations = ['card-click-animation', 'card-glow-animation', 'card-slide-animation'];
+    return animations[Math.floor(Math.random() * animations.length)];
+  };
+
   return (
-    <div className="w-full bg-white p-6 rounded-lg shadow-sm">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Donation history</h2>
+    <div className="w-1/3 bg-white p-6 rounded-lg shadow-sm">
+      {styleTag}
+      <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Order history</h2>
       <p className="text-sm text-center text-gray-500 mb-6">
         Check the status of recent donations
       </p>
@@ -80,8 +142,17 @@ const DonationHistory = ({ donations, categories }) => {
             <div
               key={item.id}
               onClick={() => openItemDetails(item)}
-              className="group relative flex items-center space-x-3 bg-white border rounded-lg p-4 hover:shadow-lg cursor-pointer transition-all duration-300 ease-in-out hover:border-blue-200"
+              className={`
+                donation-card
+                group relative flex items-center space-x-3 
+                bg-white border rounded-lg p-4 
+                hover:shadow-lg cursor-pointer
+                transition-all duration-300 ease-in-out
+                hover:border-blue-200
+                ${getRandomAnimation(item.id)}
+              `}
             >
+              {/* Item Image with hover zoom effect */}
               <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-md overflow-hidden">
                 {item.images[0] && (
                   <img
@@ -92,6 +163,7 @@ const DonationHistory = ({ donations, categories }) => {
                 )}
               </div>
 
+              {/* Item Details with hover effects */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-medium text-gray-900 capitalize group-hover:text-blue-600 transition-colors duration-300">
                   {categories.find(cat => cat.id === item.category)?.name}
@@ -106,6 +178,7 @@ const DonationHistory = ({ donations, categories }) => {
                   {formatDate(item.pickupDate)}
                 </p>
 
+                {/* Hover indicator */}
                 <div className="absolute inset-0 border-2 border-blue-500 opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-300" />
               </div>
             </div>
@@ -113,6 +186,7 @@ const DonationHistory = ({ donations, categories }) => {
         )}
       </div>
 
+      {/* Item Detail Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         {selectedItem && (
           <div>
@@ -134,10 +208,12 @@ const DonationHistory = ({ donations, categories }) => {
             </div>
             
             <div className="px-6 py-4">
+              {/* Progress Tracking */}
               <div className="mb-6">
                 <ProgressBar currentStep={selectedItem.status || 'processing'} />
               </div>
 
+              {/* Order Details */}
               <div className="space-y-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-900">Description</h4>
@@ -149,6 +225,7 @@ const DonationHistory = ({ donations, categories }) => {
                   <p className="mt-1 text-sm text-gray-500">{formatDate(selectedItem.pickupDate)}</p>
                 </div>
 
+                {/* Images Grid */}
                 {selectedItem.images.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-900 mb-2">Images</h4>
