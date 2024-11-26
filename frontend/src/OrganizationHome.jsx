@@ -55,6 +55,17 @@ function OrganizationHome() {
         });
     };
 
+    const fetchCategories = async () => {
+        try {
+            const response = await axios.get(`${apiDomain}/categories`, {
+                withCredentials: true
+            });
+            setCategories(response.data);
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+        }
+    };
+
     const fetchItems = async (page = 1, perPage = 9, radius = "", category = "") => {
         try {
             const params = {
@@ -94,6 +105,10 @@ function OrganizationHome() {
     };
 
     useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    useEffect(() => {
         const selectedCategory = filter === "" ? "" : filter;
         fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
     }, [currentPage, itemsPerPage, proximityFilter, filter]);
@@ -128,7 +143,6 @@ function OrganizationHome() {
     };
 
     const handleReservationSuccess = () => {
-        // Refresh the items list after successful reservation
         const selectedCategory = filter === "" ? "" : filter;
         fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
     };
@@ -148,7 +162,7 @@ function OrganizationHome() {
                                 {/* Category Filter */}
                                 <div className="flex flex-col">
                                     <Category
-                                        value={categories[filter] || ""}
+                                        value={filter ? categories.options?.[filter] : ""}
                                         onChange={handleCategoryChange}
                                     />
                                 </div>
@@ -189,7 +203,7 @@ function OrganizationHome() {
                                     >
                                         <h3 className="font-bold text-lg text-sky-800 mb-2">{item.description}</h3>
                                         <p className="text-sm text-gray-600">
-                                            <strong>Category:</strong> {categories[item.category] || "Unknown"}
+                                            <strong>Category:</strong> {categories.options?.[item.category] || "Unknown"}
                                         </p>
                                         <p className="text-sm text-gray-600">
                                             <strong>Distance:</strong> {item.distanceKm} Km
@@ -246,7 +260,7 @@ function OrganizationHome() {
                         isOpen={isModalOpen}
                         onClose={closeModal}
                         selectedItem={selectedItem}
-                        categories={categories}
+                        categories={categories.options}
                         onReserve={handleReservationSuccess}
                     />
                 )}
