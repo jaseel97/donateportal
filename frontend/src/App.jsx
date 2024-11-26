@@ -1,9 +1,10 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Login from "./Login";
-import Signup from "./Signup";  
-import Samaritan from "./SamaritanHome";
-import Organization from "./OrganizationHome";
+import Signup from "./Signup1";  
+
+import OrganizationHome from "./OrganizationHome";
+import SamaritanHome from "./SamaritanHome";
 
 export default function App() {
   return (
@@ -12,9 +13,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/samaritan" element={<Samaritan />} />
-          <Route path="/organization" element={<Organization />} />
+          <Route path="/signup" element={<Signup />} /> 
+          <Route path="/samaritan" element={<SamaritanHome />} />
+          <Route path="/organization" element={<OrganizationHome />} />
         </Routes>
       </div>
     </Router>

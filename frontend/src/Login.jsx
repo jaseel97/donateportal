@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import illustration from "./assets/login.jpg";
 import { apiDomain } from "./Config";
@@ -6,7 +6,8 @@ import { apiDomain } from "./Config";
 const Login = () => {
     const [formData, setFormData] = useState({ username: "", password: "" });
     const [message, setMessage] = useState("");
-    const [isFlipped, setIsFlipped] = useState(false); 
+    const [isFlipped, setIsFlipped] = useState(false);
+    const [userType, setUserType] = useState(null);
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -27,7 +28,7 @@ const Login = () => {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                credentials: 'include',
+                credentials: "include", 
                 body: JSON.stringify({ username, password }),
             });
 
@@ -38,14 +39,27 @@ const Login = () => {
                 if (data.message === "Login successful") {
                     setMessage("Login successful!");
 
-                    const jwt = response.headers.get("Set-Cookie");
-                    console.log(jwt)
-                    // document.cookie = `jwt=${jwt}; path=/; Secure; SameSite=Lax;`;
+                    const cookies = document.cookie.split("; ").reduce((acc, cookie) => {
+                        const [key, value] = cookie.split("=");
+                        acc[key] = value;
+                        return acc;
+                    }, {});
+                    
+                    const jwtToken = cookies.jwt;
+                    console.log("JWT Token:", jwtToken);
+                    
+                    if (jwtToken) {
+                        // Decode JWT to get user_type (if needed)
+                        const payload = JSON.parse(atob(jwtToken.split(".")[1]));
+                        const decodedUserType = payload.user_type;
+                        const userName = payload.username;
 
-                    if (data.user_type === "samaritan") {
-                        navigate("/samaritan");
-                    } else if (data.user_type === "organization") {
-                        navigate("/organization");
+                        console.log("User Type from JWT:", decodedUserType);
+                        console.log("User Name:", userName);
+
+                        setUserType(decodedUserType);  // Update userType to trigger navigation
+                    } else {
+                        setMessage("JWT token not found.");
                     }
                 } else {
                     setMessage(data.error || "An error occurred. Please try again.");
@@ -59,6 +73,20 @@ const Login = () => {
             setMessage("Unable to log in. Please try again later.");
         }
     };
+
+    useEffect(() => {
+        if (userType) {
+            if (userType === "samaritan") {
+                console.log("Navigating to /samaritan...");
+                navigate("/samaritan");
+            } else if (userType === "organization") {
+                console.log("Navigating to /organization...");
+                navigate("/organization");
+            } else {
+                setMessage("Unknown user type.");
+            }
+        }
+    }, [userType, navigate]);  // Trigger navigation when userType is updated
 
     const handleFlip = () => {
         setIsFlipped((prevState) => !prevState);

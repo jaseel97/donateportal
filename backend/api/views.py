@@ -206,7 +206,7 @@ def login(request):
             response.set_cookie(
                 key='jwt',
                 value=token,
-                httponly=True,
+                httponly=False,
                 secure=False,
                 samesite='Lax',
                 max_age=24 * 60 * 60
