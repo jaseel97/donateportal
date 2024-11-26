@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { apiDomain } from "./Config";
 
 function OrganizationHome() {
     const [filter, setFilter] = useState("");
@@ -17,10 +18,8 @@ function OrganizationHome() {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const response = await axios.get("http://localhost:8080/categories", {
-                    headers: {
-                        Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IlRhbmdvRGphbmdvIiwiZW1haWwiOiJ0YW5nb0BkamFuZ28uY2EiLCJpc19zdGFmZiI6ZmFsc2UsInVzZXJfdHlwZSI6Im9yZ2FuaXphdGlvbiIsImV4cCI6MTczNTA5Mjc4OX0.Us5JB1L6Zh3rhPSxTYUvCzYIk-G8JHcYCPSohuhI1VM"
-                    }
+                const response = await axios.get(`${apiDomain}/categories`, {
+                    withCredentials: true
                 });
                 setCategories(response.data.options);
             } catch (error) {
@@ -40,11 +39,9 @@ function OrganizationHome() {
                 ...(category && { category }),
             };
 
-            const response = await axios.get("http://localhost:8080/listings", {
+            const response = await axios.get(`${apiDomain}/listings`, {
                 params,
-                headers: {
-                    Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IlRhbmdvRGphbmdvIiwiZW1haWwiOiJ0YW5nb0BkamFuZ28uY2EiLCJpc19zdGFmZiI6ZmFsc2UsInVzZXJfdHlwZSI6Im9yZ2FuaXphdGlvbiIsImV4cCI6MTczNTA5Mjc4OX0.Us5JB1L6Zh3rhPSxTYUvCzYIk-G8JHcYCPSohuhI1VM"
-                }
+                withCredentials: true
             });
             const mappedItems = response.data.items.map(item => ({
                 id: item.id,

@@ -477,7 +477,7 @@ def get_item_listings_for_organizations(request):
             return JsonResponse({"error": "Organization location not set"}, status=400)
         
         try:
-            items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 10)))
+            items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 12)))
             if items_per_page <= 0:
                 return JsonResponse({"error": "Items per page must be positive"}, status=400)
         except ValueError:
@@ -491,7 +491,7 @@ def get_item_listings_for_organizations(request):
             return JsonResponse({"error": "Invalid page number"}, status=400)
         
         try:
-            radius_km = float(request.GET.get('radius', os.getenv('DEFAULT_RADIUS', 5)))
+            radius_km = float(request.GET.get('radius', os.getenv('DEFAULT_RADIUS', 100)))
             if radius_km <= 0:
                 return JsonResponse({"error": "Radius must be positive"}, status=400)
             radius_m = radius_km * 1000
@@ -608,10 +608,10 @@ class ItemView(View):
         except Organization.DoesNotExist:
             return JsonResponse({"error": "Organization not found"}, status=404)
         
-        items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 10)))
+        items_per_page = int(request.GET.get('items_per_page', os.getenv('ITEMS_PER_PAGE', 12)))
         page_number = request.GET.get('page', 1)
 
-        radius_km = float(request.GET.get('radius', os.getenv('DEFAULT_RADIUS', 5)))
+        radius_km = float(request.GET.get('radius', os.getenv('DEFAULT_RADIUS', 100)))
         category = request.GET.get('category')
     
         radius_m = radius_km * 1000
