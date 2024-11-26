@@ -17,9 +17,7 @@ const Category = ({ value, onChange, categories }) => {
 
   return (
     <div className="mb-6">
-      <label className="categorylabel">
-        Category
-      </label>
+      <label className="categorylabel">Category</label>
       <div className="relative" ref={dropdownRef}>
         <button
           type="button"
@@ -32,7 +30,7 @@ const Category = ({ value, onChange, categories }) => {
             </span>
           </div>
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-            <ChevronUpDownIcon 
+            <ChevronUpDownIcon
               className={`category-icon ${isOpen ? 'rotate-180' : ''}`}
               aria-hidden="true"
             />
@@ -48,14 +46,14 @@ const Category = ({ value, onChange, categories }) => {
                   value === categoryValue ? 'categoryitem-selected' : ''
                 }`}
                 onClick={() => {
-                  onChange({ target: { name: 'category', value: categoryValue } });
+                  onChange({ target: { name: 'category', id: key, value: categoryValue } });
                   setIsOpen(false);
                 }}
               >
                 <div className="flex items-center">
                   <span className={`categoryitem-text ${
-                    value === categoryValue ? 'categoryitem-text-selected' : ''
-                  }`}>
+                      value === categoryValue ? 'categoryitem-text-selected' : ''
+                    }`}>
                     {categoryValue}
                   </span>
                   {value === categoryValue && (

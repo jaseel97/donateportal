@@ -71,9 +71,10 @@ const Modal = ({
                             <div>
                                 <h4 className="categorylabel">Details</h4>
                                 <div className="mt-2 text-sm text-gray-500 space-y-1">
+                                    <p>Posted By: {selectedItem.postedBy}</p>
+                                    <p>Distance: {selectedItem.distanceKm} Km</p>
                                     <p>Weight: {selectedItem.weight} {selectedItem.weightUnit}</p>
                                     <p>Volume: {selectedItem.volume} {selectedItem.volumeUnit}</p>
-                                    <p>Distance: {selectedItem.distanceKm} Km</p>
                                     <p>Best Before: {new Date(selectedItem.bestBefore).toLocaleDateString()}</p>
                                 </div>
                             </div>

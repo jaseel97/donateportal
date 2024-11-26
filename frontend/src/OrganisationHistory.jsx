@@ -95,6 +95,12 @@ const OrganisationHistory = ({ donations, categories }) => {
                          transition-all duration-300"
             >
               <div className="space-y-3">
+                {/* Description Line */}
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-700 w-24">Item:</span>
+                  <span className="text-sm text-gray-600">{item.description || 'No description available'}</span>
+                </div>
+
                 {/* Category Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Category:</span>
@@ -107,12 +113,6 @@ const OrganisationHistory = ({ donations, categories }) => {
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Status:</span>
                   <StatusBadge status={item.status || 'processing'} />
-                </div>
-
-                {/* Description Line */}
-                <div className="flex items-center">
-                  <span className="text-sm font-medium text-gray-700 w-24">Description:</span>
-                  <span className="text-sm text-gray-600">{item.about || 'No description available'}</span>
                 </div>
 
                 {/* Date Line */}

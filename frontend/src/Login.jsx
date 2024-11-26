@@ -33,15 +33,11 @@ const Login = () => {
 
             if (response.ok) {
                 const data = await response.json();
-                console.log(data);
 
                 if (data.message === "Login successful") {
                     setMessage("Login successful!");
 
                     const jwt = response.headers.get("Set-Cookie");
-                    console.log(jwt)
-                    // document.cookie = `jwt=${jwt}; path=/; Secure; SameSite=Lax;`;
-
                     if (data.user_type === "samaritan") {
                         navigate("/samaritan");
                     } else if (data.user_type === "organization") {

@@ -1,40 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from "axios";
+import { apiDomain } from "./Config";
 import { PhotoIcon } from '@heroicons/react/24/solid';
 import Category from './Category';
 import DatePicker from './DatePicker';
 import UploadImage from './UploadImage';
 
 const DonationForm = ({ onSubmit }) => {
-  const [formData, setFormData] = React.useState({
+  const [categories, setCategories] = useState({});
+  const [formData, setFormData] = useState({
     category: '',
+    categoryID: '',
     about: '',
     images: [],
     pickupDate: '',
     weight: '',
     volume: '',
-    bestBefore: ''
+    bestBefore: '',
+    latitude: '',
+    longitude: '' 
   });
 
-  const categories = {
-    "options": {
-      "0": "Food",
-      "1": "Clothes",
-      "2": "Books",
-      "3": "Furniture",
-      "4": "Household Items",
-      "5": "Electronics",
-      "6": "Toys",
-      "7": "Medical Supplies",
-      "8": "Pet Supplies",
-      "9": "Others"
-    }
-  };
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${apiDomain}/categories`, {
+          withCredentials: true
+        });
+        setCategories(response.data);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleCategoryChange = (e) => {
+    const { value, id } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      categoryID: id, 
+      category: value 
     }));
   };
 
@@ -46,14 +61,41 @@ const DonationForm = ({ onSubmit }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formData);
-    handleReset();
+    
+    const postData = {
+      category: parseInt(formData.categoryID, 10),
+      description: formData.about,
+      pickup_location: {
+        latitude: 43.880, 
+        longitude: -79.605 
+      },
+      weight: formData.weight,
+      weight_unit: "g",
+      volume: formData.volume,
+      volume_unit: "m³",
+      best_before: new Date(formData.bestBefore).toISOString().split('T')[0]
+    };
+
+    try {
+      const response = await axios.post("http://localhost:8080/samaritan/donate", postData, {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        withCredentials: true
+      });
+      console.log("Donation saved successfully:", response.data);
+      onSubmit(response.data);
+      handleReset();
+    } catch (error) {
+      console.error("Error saving donation:", error);
+    }
   };
 
   const handleReset = () => {
     setFormData({
+      categoryID: '',
       category: '',
       about: '',
       images: [],
@@ -71,9 +113,10 @@ const DonationForm = ({ onSubmit }) => {
           <div>
             <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Add New Donation</h2>
             <div className="flex gap-6 w-full mx-auto">
-              <Category 
+              <Category
+                id={formData.categoryID}
                 value={formData.category}
-                onChange={handleInputChange}
+                onChange={handleCategoryChange}
                 categories={categories}
               />
               <div className="mb-6">
@@ -81,6 +124,7 @@ const DonationForm = ({ onSubmit }) => {
                   Preferred Pickup Date
                 </label>
                 <DatePicker
+                  name="pickupDate"
                   value={formData.pickupDate}
                   onChange={handleInputChange}
                 />
@@ -101,7 +145,7 @@ const DonationForm = ({ onSubmit }) => {
                 required
               />
             </div>
-            
+
             {/* Weight and Volume inputs in one line */}
             <div className="flex gap-6 mb-6">
               <div className="flex-1">
@@ -150,7 +194,7 @@ const DonationForm = ({ onSubmit }) => {
               />
             </div>
 
-            <UploadImage 
+            <UploadImage
               images={formData.images}
               onChange={handleImageChange}
             />
