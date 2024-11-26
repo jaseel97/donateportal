@@ -7,11 +7,12 @@ const Modal = ({
     isOpen, 
     onClose, 
     selectedItem, 
-    categories, 
-    children 
+    categories,
+    onReserve 
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [isSuccess, setIsSuccess] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -30,17 +31,20 @@ const Modal = ({
         setError(null);
 
         try {
-            const response = await axios.post(`${apiDomain}/item/${selectedItem.id}/reserve`, {
-            }, {
+            const response = await axios.post(`${apiDomain}/item/${selectedItem.id}/reserve`, {}, {
                 headers: {
                     "Content-Type": "application/json"
-                  },
+                },
                 withCredentials: true
             });
 
             if (response.status === 200) {
-                onReserve();
-                onClose();
+                setIsSuccess(true);
+                setTimeout(() => {
+                    onReserve();
+                    onClose();
+                    setIsSuccess(false); // Reset success state
+                }, 1500);
             }
         } catch (err) {
             setError(err.response ? err.response.data.message : err.message);
@@ -50,6 +54,21 @@ const Modal = ({
     };
 
     if (!isOpen || !selectedItem) return null;
+
+    if (isSuccess) {
+        return (
+            <div className="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center">
+                <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
+                <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 sm:mx-auto transform transition-all">
+                    <div className="p-6 text-center">
+                        <h3 className="text-lg font-medium text-green-600 mb-2">
+                            You have successfully reserved this item
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center">
