@@ -18,8 +18,9 @@ const DonationForm = ({ onSubmit }) => {
     weight: '',
     volume: '',
     bestBefore: '',
-    latitude: '',
-    longitude: '' 
+    pickupWindowStart: '09:00', 
+    pickupWindowEnd: '17:00', 
+    availableTill: '', 
   });
 
   useEffect(() => {
@@ -49,8 +50,8 @@ const DonationForm = ({ onSubmit }) => {
     const { value, id } = e.target;
     setFormData(prev => ({
       ...prev,
-      categoryID: id, 
-      category: value 
+      categoryID: id,
+      category: value
     }));
   };
 
@@ -62,21 +63,37 @@ const DonationForm = ({ onSubmit }) => {
     }));
   };
 
+  const formatToISOWithTimezone = (date) => {
+    const pad = (num) => String(num).padStart(2, '0');
+    
+    const year = date.getUTCFullYear();
+    const month = pad(date.getUTCMonth() + 1); 
+    const day = pad(date.getUTCDate());
+    const hours = pad(date.getUTCHours());
+    const minutes = pad(date.getUTCMinutes());
+    const seconds = pad(date.getUTCSeconds());
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+00:00`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const postData = {
       category: parseInt(formData.categoryID, 10),
       description: formData.about,
       pickup_location: {
-        latitude: 43.880, 
-        longitude: -79.605 
+        latitude: 43.655070, // Hardcoded value
+        longitude: -79.345015 // Hardcoded value
       },
       weight: formData.weight,
-      weight_unit: "g",
+      weight_unit: "kg", 
       volume: formData.volume,
       volume_unit: "m³",
-      best_before: new Date(formData.bestBefore).toISOString().split('T')[0]
+      best_before: new Date(formData.bestBefore).toISOString().split('T')[0],
+      pickup_window_start: formData.pickupWindowStart,
+      pickup_window_end: formData.pickupWindowEnd,
+      available_till: formatToISOWithTimezone(new Date(formData.bestBefore))
     };
 
     try {
@@ -103,7 +120,10 @@ const DonationForm = ({ onSubmit }) => {
       pickupDate: '',
       weight: '',
       volume: '',
-      bestBefore: ''
+      bestBefore: '',
+      pickupWindowStart: '09:00',
+      pickupWindowEnd: '17:00',
+      availableTill: ''
     });
   };
 
@@ -147,11 +167,10 @@ const DonationForm = ({ onSubmit }) => {
               />
             </div>
 
-            {/* Weight and Volume inputs in one line */}
             <div className="flex gap-6 mb-6">
               <div className="flex-1">
                 <label htmlFor="weight" className="categorylabel">
-                  Weight (g)
+                  Weight (kg)
                 </label>
                 <input
                   type="number"
@@ -181,18 +200,31 @@ const DonationForm = ({ onSubmit }) => {
                   step="1.0"
                 />
               </div>
-
-                {/* Best Before Date */}
-            <div className="mb-6">
-              <label htmlFor="bestBefore" className="categorylabel">
-                Best Before
-              </label>
-              <Calendar
-                name="bestBefore"
-                value={formData.bestBefore}
-                onChange={handleInputChange}
-              />
+              <div className="mb-6">
+                <label htmlFor="bestBefore" className="categorylabel">
+                  Best Before
+                </label>
+                <Calendar
+                  name="bestBefore"
+                  value={formData.bestBefore}
+                  onChange={handleInputChange}
+                />
+              </div>
             </div>
+            <div className="mb-6">
+              <label htmlFor="pickup-location" className="categorylabel">
+                Pickup Location
+              </label>
+              <textarea
+                id="pickup-location"
+                name="pickup-location"
+                rows={1}
+                value={formData.pickupLocation}
+                onChange={handleInputChange}
+                className="textareastyle resize-none"
+                placeholder="Add Pickup Location"
+                required
+              />
             </div>
 
             <UploadImage
