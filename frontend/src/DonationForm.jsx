@@ -18,9 +18,10 @@ const DonationForm = ({ onSubmit }) => {
     weight: '',
     volume: '',
     bestBefore: '',
-    pickupWindowStart: '09:00', 
-    pickupWindowEnd: '17:00', 
-    availableTill: '', 
+    pickupWindowStart: '09:00',
+    pickupWindowEnd: '17:00',
+    availableTill: '',
+    pickupLocation: '', // Added to match the form field
   });
 
   useEffect(() => {
@@ -67,7 +68,7 @@ const DonationForm = ({ onSubmit }) => {
     const pad = (num) => String(num).padStart(2, '0');
     
     const year = date.getUTCFullYear();
-    const month = pad(date.getUTCMonth() + 1); 
+    const month = pad(date.getUTCMonth() + 1);
     const day = pad(date.getUTCDate());
     const hours = pad(date.getUTCHours());
     const minutes = pad(date.getUTCMinutes());
@@ -79,25 +80,34 @@ const DonationForm = ({ onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate required fields
+    const requiredFields = ['categoryID', 'about', 'pickupDate', 'bestBefore', 'availableTill', 'pickupLocation'];
+    const missingFields = requiredFields.filter(field => !formData[field]);
+    
+    if (missingFields.length > 0) {
+      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
     const postData = {
       category: parseInt(formData.categoryID, 10),
       description: formData.about,
       pickup_location: {
-        latitude: 43.655070, // Hardcoded value
-        longitude: -79.345015 // Hardcoded value
+        latitude: 43.655070,
+        longitude: -79.345015
       },
-      weight: formData.weight,
-      weight_unit: "kg", 
-      volume: formData.volume,
+      weight: formData.weight || null,
+      weight_unit: "kg",
+      volume: formData.volume || null,
       volume_unit: "m³",
       best_before: new Date(formData.bestBefore).toISOString().split('T')[0],
       pickup_window_start: formData.pickupWindowStart,
       pickup_window_end: formData.pickupWindowEnd,
-      available_till: formatToISOWithTimezone(new Date(formData.bestBefore))
+      available_till: formatToISOWithTimezone(new Date(formData.availableTill))
     };
 
     try {
-      const response = await axios.post(`${apiDomain}/samaritan/donate`, postData, {
+      const response = await axios.post("http://localhost:8080/samaritan/donate", postData, {
         headers: {
           "Content-Type": "application/json"
         },
@@ -123,115 +133,120 @@ const DonationForm = ({ onSubmit }) => {
       bestBefore: '',
       pickupWindowStart: '09:00',
       pickupWindowEnd: '17:00',
-      availableTill: ''
+      availableTill: '',
+      pickupLocation: ''
     });
   };
 
   return (
     <div className="flex-1 w-full bg-white p-6 rounded-lg shadow-sm">
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-12">
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Add New Donation</h2>
-            <div className="flex gap-6 w-full mx-auto">
-              <Category
-                id={formData.categoryID}
-                value={formData.category}
-                onChange={handleCategoryChange}
-                categories={categories}
-              />
-              <div className="mb-6">
-                <label htmlFor="pickupDate" className="categorylabel">
-                  Preferred Pickup Date
-                </label>
-                <DatePicker
-                  name="pickupDate"
-                  value={formData.pickupDate}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Add New Donation</h2>
+          
+          <div className="flex gap-6 w-full mx-auto">
+            <Category
+              id={formData.categoryID}
+              value={formData.category}
+              onChange={handleCategoryChange}
+              categories={categories}
+              required
+            />
             <div className="mb-6">
-              <label htmlFor="donation-description" className="categorylabel">
-                Item Description
+              <label htmlFor="pickupDate" className="categorylabel">
+              Available Till*
               </label>
-              <textarea
-                id="donation-description"
-                name="about"
-                rows={3}
-                value={formData.about}
+              <DatePicker
+                name="pickupDate"
+                value={formData.pickupDate}
                 onChange={handleInputChange}
-                className="textareastyle resize-none"
-                placeholder="Describe your donation item..."
                 required
               />
             </div>
+          </div>
 
-            <div className="flex gap-6 mb-6">
-              <div className="flex-1">
-                <label htmlFor="weight" className="categorylabel">
-                  Weight (kg)
-                </label>
-                <input
-                  type="number"
-                  id="weight"
-                  name="weight"
-                  value={formData.weight}
-                  onChange={handleInputChange}
-                  className="textareastyle"
-                  placeholder="Enter weight"
-                  min="0"
-                  step="0.1"
-                />
-              </div>
-              <div className="flex-1">
-                <label htmlFor="volume" className="categorylabel">
-                  Volume (m³)
-                </label>
-                <input
-                  type="number"
-                  id="volume"
-                  name="volume"
-                  value={formData.volume}
-                  onChange={handleInputChange}
-                  className="textareastyle"
-                  placeholder="Enter volume"
-                  min="0"
-                  step="1.0"
-                />
-              </div>
-              <div className="mb-6">
-                <label htmlFor="bestBefore" className="categorylabel">
-                  Best Before
-                </label>
-                <Calendar
-                  name="bestBefore"
-                  value={formData.bestBefore}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-            <div className="mb-6">
-              <label htmlFor="pickup-location" className="categorylabel">
-                Pickup Location
-              </label>
-              <textarea
-                id="pickup-location"
-                name="pickup-location"
-                rows={1}
-                value={formData.pickupLocation}
-                onChange={handleInputChange}
-                className="textareastyle resize-none"
-                placeholder="Add Pickup Location"
-                required
-              />
-            </div>
-
-            <UploadImage
-              images={formData.images}
-              onChange={handleImageChange}
+          <div className="mb-6">
+            <label htmlFor="donation-description" className="categorylabel">
+              Item Description*
+            </label>
+            <textarea
+              id="donation-description"
+              name="about"
+              rows={3}
+              value={formData.about}
+              onChange={handleInputChange}
+              className="textareastyle resize-none"
+              placeholder="Describe your donation item..."
+              required
             />
           </div>
+
+          <div className="flex gap-6 mb-6">
+            <div className="flex-1">
+              <label htmlFor="weight" className="categorylabel">
+                Weight (kg)
+              </label>
+              <input
+                type="number"
+                id="weight"
+                name="weight"
+                value={formData.weight}
+                onChange={handleInputChange}
+                className="textareastyle"
+                placeholder="Enter weight"
+                min="0"
+                step="0.1"
+              />
+            </div>
+            <div className="flex-1">
+              <label htmlFor="volume" className="categorylabel">
+                Volume (m³)
+              </label>
+              <input
+                type="number"
+                id="volume"
+                name="volume"
+                value={formData.volume}
+                onChange={handleInputChange}
+                className="textareastyle"
+                placeholder="Enter volume"
+                min="0"
+                step="1.0"
+              />
+            </div>
+            <div className="mb-6">
+              <label htmlFor="bestBefore" className="categorylabel">
+                Best Before*
+              </label>
+              <Calendar
+                name="bestBefore"
+                value={formData.bestBefore}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="pickup-location" className="categorylabel">
+              Pickup Location*
+            </label>
+            <textarea
+              id="pickup-location"
+              name="pickupLocation"
+              rows={1}
+              value={formData.pickupLocation}
+              onChange={handleInputChange}
+              className="textareastyle resize-none"
+              placeholder="Add Pickup Location"
+              required
+            />
+          </div>
+
+          <UploadImage
+            images={formData.images}
+            onChange={handleImageChange}
+          />
         </div>
 
         <div className="flex justify-end gap-4 pt-6">

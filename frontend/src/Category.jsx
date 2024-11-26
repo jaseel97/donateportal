@@ -17,7 +17,7 @@ const Category = ({ value, onChange, categories }) => {
 
   return (
     <div className="mb-6">
-      <label className="categorylabel">Category</label>
+      <label className="categorylabel">Category*</label>
       <div className="relative" ref={dropdownRef}>
         <button
           type="button"
