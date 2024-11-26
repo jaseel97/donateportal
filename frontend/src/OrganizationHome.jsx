@@ -145,35 +145,6 @@ function OrganizationHome() {
         setModalOpen(false);
     };
 
-    const handleReserve = async () => {
-        try {
-            await axios.post(`${apiDomain}/reserve`, {
-                itemId: selectedItem.id
-            }, {
-                withCredentials: true
-            });
-
-            const newDonation = {
-                id: selectedItem.id,
-                category: selectedItem.category,
-                description: selectedItem.description,
-                about: `Weight: ${selectedItem.weight} ${selectedItem.weightUnit}, Volume: ${selectedItem.volume} ${selectedItem.volumeUnit}`,
-                status: 'Reserved',
-                pickupDate: new Date(),
-                images: []
-            };
-
-            setReceivedDonations(prev => [newDonation, ...prev]);
-            closeModal();
-
-            // Show success message
-            alert('Item reserved successfully!');
-        } catch (error) {
-            console.error("Error reserving item:", error);
-            alert("Failed to reserve item. Please try again.");
-        }
-    };
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
             <div className="max-w-7xl mx-auto p-6">
@@ -309,7 +280,6 @@ function OrganizationHome() {
                         onClose={closeModal}
                         selectedItem={selectedItem}
                         categories={categories}
-                        onReserve={handleReserve}
                     />
                 )}
                 <footer className="mt-12 text-center text-sky-600 text-sm animate-slideUp">

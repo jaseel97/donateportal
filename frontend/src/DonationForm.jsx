@@ -1,272 +1,144 @@
-import React, { useState, useEffect } from 'react';
-import axios from "axios";
-import { apiDomain } from "./Config";
-import { PhotoIcon } from '@heroicons/react/24/solid';
-import Category from './Category';
-import DatePicker from './DatePicker';
-import UploadImage from './UploadImage';
-import Calendar from './Calendar';
+import React, { useEffect, useState } from 'react';
+import { XMarkIcon } from '@heroicons/react/24/solid';
+import axios from 'axios';
 
-const DonationForm = ({ onSubmit }) => {
-  const [categories, setCategories] = useState({});
-  const [formData, setFormData] = useState({
-    category: '',
-    categoryID: '',
-    about: '',
-    images: [],
-    pickupDate: '',
-    weight: '',
-    volume: '',
-    bestBefore: '',
-    pickupWindowStart: '09:00',
-    pickupWindowEnd: '17:00',
-    availableTill: '',
-    pickupLocation: '', // Added to match the form field
-  });
+const Modal = ({ 
+    isOpen, 
+    onClose, 
+    selectedItem, 
+    categories, 
+    onReserve, 
+    children 
+}) => {
+    const [isLoading, setIsLoading] = useState(false); // to handle loading state
+    const [error, setError] = useState(null); // to handle any errors
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(`${apiDomain}/categories`, {
-          withCredentials: true
-        });
-        setCategories(response.data);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
+
+    const handleReserve = async () => {
+        if (!selectedItem || !selectedItem.id) return;
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const response = await axios.post(`http://localhost:8080/item/${selectedItem.id}/reserve`, {
+                // You can add the body content here if needed
+                // Example: { "user_id": userId, "other_data": data }
+            });
+
+            // Handle successful API response
+            if (response.status === 200) {
+                // Call the passed in onReserve callback, or handle success in any other way
+                onReserve();
+
+                // Close the modal after successful reserve
+                onClose();
+            }
+        } catch (err) {
+            // Handle error
+            setError(err.response ? err.response.data.message : err.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    fetchCategories();
-  }, []);
+    if (!isOpen || !selectedItem) return null;
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleCategoryChange = (e) => {
-    const { value, id } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      categoryID: id,
-      category: value
-    }));
-  };
-
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setFormData(prev => ({
-      ...prev,
-      images: files
-    }));
-  };
-
-  const formatToISOWithTimezone = (date) => {
-    const pad = (num) => String(num).padStart(2, '0');
-    
-    const year = date.getUTCFullYear();
-    const month = pad(date.getUTCMonth() + 1);
-    const day = pad(date.getUTCDate());
-    const hours = pad(date.getUTCHours());
-    const minutes = pad(date.getUTCMinutes());
-    const seconds = pad(date.getUTCSeconds());
-    
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+00:00`;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Validate required fields
-    const requiredFields = ['categoryID', 'about', 'pickupDate', 'bestBefore', 'availableTill', 'pickupLocation'];
-    const missingFields = requiredFields.filter(field => !formData[field]);
-    
-    if (missingFields.length > 0) {
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
-      return;
-    }
-
-    const postData = {
-      category: parseInt(formData.categoryID, 10),
-      description: formData.about,
-      pickup_location: {
-        latitude: 43.655070,
-        longitude: -79.345015
-      },
-      weight: formData.weight || null,
-      weight_unit: "kg",
-      volume: formData.volume || null,
-      volume_unit: "m³",
-      best_before: new Date(formData.bestBefore).toISOString().split('T')[0],
-      pickup_window_start: formData.pickupWindowStart,
-      pickup_window_end: formData.pickupWindowEnd,
-      available_till: formatToISOWithTimezone(new Date(formData.availableTill))
-    };
-
-    try {
-      const response = await axios.post("http://localhost:8080/samaritan/donate", postData, {
-        headers: {
-          "Content-Type": "application/json"
-        },
-        withCredentials: true
-      });
-      console.log("Donation saved successfully:", response.data);
-      onSubmit(response.data);
-      handleReset();
-    } catch (error) {
-      console.error("Error saving donation:", error);
-    }
-  };
-
-  const handleReset = () => {
-    setFormData({
-      categoryID: '',
-      category: '',
-      about: '',
-      images: [],
-      pickupDate: '',
-      weight: '',
-      volume: '',
-      bestBefore: '',
-      pickupWindowStart: '09:00',
-      pickupWindowEnd: '17:00',
-      availableTill: '',
-      pickupLocation: ''
-    });
-  };
-
-  return (
-    <div className="flex-1 w-full bg-white p-6 rounded-lg shadow-sm">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Add New Donation</h2>
-          
-          <div className="flex gap-6 w-full mx-auto">
-            <Category
-              id={formData.categoryID}
-              value={formData.category}
-              onChange={handleCategoryChange}
-              categories={categories}
-              required
+    return (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto flex items-center justify-center">
+            <div 
+                className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" 
+                onClick={onClose}
             />
-            <div className="mb-6">
-              <label htmlFor="pickupDate" className="categorylabel">
-              Available Till*
-              </label>
-              <DatePicker
-                name="pickupDate"
-                value={formData.pickupDate}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-          </div>
+            <div 
+                className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4 sm:mx-auto transform transition-all"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="bg-white/95 rounded-lg overflow-hidden">
+                    <div className="px-6 py-4 border-b-2 border-indigo-200">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <h3 className="text-lg font-medium text-sky-800">
+                                    Donation Details
+                                </h3>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Review the details and reserve if interested
+                                </p>
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className="p-2 rounded-md text-gray-400 hover:text-gray-500 
+                                         hover:bg-gray-100 focus:outline-none focus:ring-2 
+                                         focus:ring-inset focus:ring-sky-500"
+                            >
+                                <XMarkIcon className="h-5 w-5" />
+                            </button>
+                        </div>
+                    </div>
 
-          <div className="mb-6">
-            <label htmlFor="donation-description" className="categorylabel">
-              Item Description*
-            </label>
-            <textarea
-              id="donation-description"
-              name="about"
-              rows={3}
-              value={formData.about}
-              onChange={handleInputChange}
-              className="textareastyle resize-none"
-              placeholder="Describe your donation item..."
-              required
-            />
-          </div>
+                    <div className="px-6 py-4">
+                        <div className="space-y-4">
+                            <div>
+                                <h4 className="categorylabel">Description</h4>
+                                <p className="mt-1 text-sm text-gray-500">{selectedItem.description}</p>
+                            </div>
 
-          <div className="flex gap-6 mb-6">
-            <div className="flex-1">
-              <label htmlFor="weight" className="categorylabel">
-                Weight (kg)
-              </label>
-              <input
-                type="number"
-                id="weight"
-                name="weight"
-                value={formData.weight}
-                onChange={handleInputChange}
-                className="textareastyle"
-                placeholder="Enter weight"
-                min="0"
-                step="0.1"
-              />
-            </div>
-            <div className="flex-1">
-              <label htmlFor="volume" className="categorylabel">
-                Volume (m³)
-              </label>
-              <input
-                type="number"
-                id="volume"
-                name="volume"
-                value={formData.volume}
-                onChange={handleInputChange}
-                className="textareastyle"
-                placeholder="Enter volume"
-                min="0"
-                step="1.0"
-              />
-            </div>
-            <div className="mb-6">
-              <label htmlFor="bestBefore" className="categorylabel">
-                Best Before*
-              </label>
-              <Calendar
-                name="bestBefore"
-                value={formData.bestBefore}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-          </div>
+                            <div>
+                                <h4 className="categorylabel">Category</h4>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    {categories[selectedItem.category] || "Unknown"}
+                                </p>
+                            </div>
 
-          <div className="mb-6">
-            <label htmlFor="pickup-location" className="categorylabel">
-              Pickup Location*
-            </label>
-            <textarea
-              id="pickup-location"
-              name="pickupLocation"
-              rows={1}
-              value={formData.pickupLocation}
-              onChange={handleInputChange}
-              className="textareastyle resize-none"
-              placeholder="Add Pickup Location"
-              required
-            />
-          </div>
+                            <div>
+                                <h4 className="categorylabel">Details</h4>
+                                <div className="mt-2 text-sm text-gray-500 space-y-1">
+                                    <p>Posted By: {selectedItem.postedBy}</p>
+                                    <p>Distance: {selectedItem.distanceKm} Km</p>
+                                    <p>Pickup Window: {selectedItem.pickupStart} - {selectedItem.pickupEnd}</p>
+                                    <p>Available Till: {selectedItem.availableTill}</p>
+                                    <p>Weight: {selectedItem.weight} {selectedItem.weightUnit}</p>
+                                    <p>Volume: {selectedItem.volume} {selectedItem.volumeUnit}</p>
+                                    <p>Best Before: {selectedItem.bestBefore}</p>
+                                </div>
+                            </div>
 
-          <UploadImage
-            images={formData.images}
-            onChange={handleImageChange}
-          />
+                            <div className="pt-4 border-t-2 border-indigo-200">
+                                <div className="flex justify-end space-x-3">
+                                    <button
+                                        onClick={onClose}
+                                        className="resetbutton"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleReserve}
+                                        className="submitbutton"
+                                        disabled={isLoading}
+                                    >
+                                        {isLoading ? 'Reserving...' : 'Reserve'}
+                                    </button>
+                                </div>
+                                {error && (
+                                    <p className="text-red-500 text-sm mt-2">{error}</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <div className="flex justify-end gap-4 pt-6">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="resetbutton"
-          >
-            Clear Form
-          </button>
-          <button
-            type="submit"
-            className="submitbutton"
-          >
-            Confirm Donation
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+    );
 };
 
-export default DonationForm;
+export default Modal;
