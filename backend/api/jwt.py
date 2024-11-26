@@ -1,6 +1,6 @@
 from django.conf import settings
 import jwt
-import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from django.http import JsonResponse
 
@@ -10,7 +10,7 @@ def generate_jwt_token(input):
         'email': input['email'],
         'is_staff': input['is_staff'],
         'user_type':input['user_type'],
-        'exp': datetime.datetime.now(datetime.timezone.utc) + settings.JWT_EXPIRATION_DELTA
+        'exp': datetime.now(timezone.utc) + settings.JWT_EXPIRATION_DELTA
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm='HS256')
 
@@ -52,7 +52,7 @@ def token_required(allowed_user_types=None):
                 
                 # Check token expiration
                 exp_timestamp = payload['exp']
-                if datetime.datetime.now(datetime.timezone.utc).timestamp() > exp_timestamp:
+                if datetime.now(timezone.utc).timestamp() > exp_timestamp:
                     return JsonResponse({
                         'error': 'Token has expired'
                     }, status=401)

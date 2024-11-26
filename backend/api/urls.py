@@ -1,16 +1,20 @@
 from django.urls import include, path
 
 from . import views
-from .views import ItemView
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('items', ItemView.as_view(), name='items'),
 
     path('categories', views.get_categories, name="view_categories"),
-    path('listings', views.get_item_listings_for_organizations, name='view_item_listings'),
+
+    path('organization/browse', views.browse_item_listings, name='browse_item_listings'),
+    path('organization/<str:username>/items', views.get_organization_items, name='organization_interacted_items'),
 
     path('samaritan/donate', views.donate_item, name='donate_items'),
+    path('samaritan/<str:username>/items', views.get_samaritan_items, name='samaritan_donated_items'),
+
+    path('item/<int:item_id>/reserve', views.reserve_item, name='reserve_item'),
+    path('item/<int:item_id>/pickup', views.pickup_item, name='mark_item_picked_up'),
 
     path('auth/organization/signup', views.signup_organization, name='signup_organization'),
     path('auth/samaritan/signup', views.signup_samaritan, name='signup_samaritan'),
