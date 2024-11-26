@@ -1,6 +1,6 @@
 import React from 'react';
 
-const DatePicker = ({ value, onChange, name = "pickupDate" }) => {
+const DatePicker = ({ value, onChange, name = "availableTill" }) => {
   // Parse the value string if it exists
   const [date, timeFrom, timeTo] = value ? value.split(' ') : ['', '', ''];
 
