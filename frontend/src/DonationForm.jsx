@@ -5,6 +5,7 @@ import { PhotoIcon } from '@heroicons/react/24/solid';
 import Category from './Category';
 import DatePicker from './DatePicker';
 import UploadImage from './UploadImage';
+import Calendar from './Calendar';
 
 const DonationForm = ({ onSubmit }) => {
   const [categories, setCategories] = useState({});
@@ -120,7 +121,7 @@ const DonationForm = ({ onSubmit }) => {
                 categories={categories}
               />
               <div className="mb-6">
-                <label htmlFor="pickupDate" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="pickupDate" className="categorylabel">
                   Preferred Pickup Date
                 </label>
                 <DatePicker
@@ -131,7 +132,7 @@ const DonationForm = ({ onSubmit }) => {
               </div>
             </div>
             <div className="mb-6">
-              <label htmlFor="donation-description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="donation-description" className="categorylabel">
                 Item Description
               </label>
               <textarea
@@ -149,7 +150,7 @@ const DonationForm = ({ onSubmit }) => {
             {/* Weight and Volume inputs in one line */}
             <div className="flex gap-6 mb-6">
               <div className="flex-1">
-                <label htmlFor="weight" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="weight" className="categorylabel">
                   Weight (g)
                 </label>
                 <input
@@ -158,14 +159,14 @@ const DonationForm = ({ onSubmit }) => {
                   name="weight"
                   value={formData.weight}
                   onChange={handleInputChange}
-                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="textareastyle"
                   placeholder="Enter weight"
                   min="0"
                   step="0.1"
                 />
               </div>
               <div className="flex-1">
-                <label htmlFor="volume" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="volume" className="categorylabel">
                   Volume (m³)
                 </label>
                 <input
@@ -174,24 +175,24 @@ const DonationForm = ({ onSubmit }) => {
                   name="volume"
                   value={formData.volume}
                   onChange={handleInputChange}
-                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="textareastyle"
                   placeholder="Enter volume"
                   min="0"
                   step="1.0"
                 />
               </div>
-            </div>
 
-            {/* Best Before Date */}
+                {/* Best Before Date */}
             <div className="mb-6">
-              <label htmlFor="bestBefore" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="bestBefore" className="categorylabel">
                 Best Before
               </label>
-              <DatePicker
+              <Calendar
                 name="bestBefore"
                 value={formData.bestBefore}
                 onChange={handleInputChange}
               />
+            </div>
             </div>
 
             <UploadImage
