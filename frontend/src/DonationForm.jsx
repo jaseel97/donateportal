@@ -154,7 +154,7 @@ const DonationForm = ({ onSubmit }) => {
             />
             <div className="mb-6">
               <label htmlFor="pickupDate" className="categorylabel">
-              Available Till*
+              Available Till & Pickup Time*
               </label>
               <DatePicker
                 name="pickupDate"
