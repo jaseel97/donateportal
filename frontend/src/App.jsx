@@ -11,6 +11,7 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <Routes>
           <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/samaritan" element={<Samaritan />} />
           <Route path="/organization" element={<Organization />} />
