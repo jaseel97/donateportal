@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import os
 import json
 import re
@@ -13,9 +13,11 @@ from django.shortcuts import get_object_or_404
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
+from django.db import transaction
 
 from api.jwt import generate_jwt_token, token_required
 from api.validation import validate_category, validate_coordinates, validate_organization_data, validate_samaritan_data
+from api.tasks import make_inactive
 
 from .models import Organization, Item, Samaritan
 
@@ -366,7 +368,6 @@ def donate_item(request):
                 "error": error,
                 "options": valid_categories
             }, status=400)
-        
 
         location = data['pickup_location']
         valid, error = validate_coordinates(location)
@@ -394,7 +395,6 @@ def donate_item(request):
                 "error": "Invalid weight or volume format"
             }, status=400)
         
-        # Validate best_before date --------------------> not needed ?
         best_before = data.get('best_before')
         if best_before:
             try:
@@ -407,8 +407,45 @@ def donate_item(request):
                 return JsonResponse({
                     "error": "Invalid best_before date format. Use YYYY-MM-DD"
                 }, status=400)
+
+
+        pickup_window_start = data.get('pickup_window_start')
+        pickup_window_end = data.get('pickup_window_end')
         
-        # Get the samaritan
+        if pickup_window_start:
+            try:
+                pickup_window_start = datetime.strptime(pickup_window_start, '%H:%M').time()
+            except ValueError:
+                return JsonResponse({
+                    "error": "Invalid pickup_window_start format. Use HH:MM"
+                }, status=400)
+                
+        if pickup_window_end:
+            try:
+                pickup_window_end = datetime.strptime(pickup_window_end, '%H:%M').time()
+            except ValueError:
+                return JsonResponse({
+                    "error": "Invalid pickup_window_end format. Use HH:MM"
+                }, status=400)
+                
+        if pickup_window_start and pickup_window_end and pickup_window_start >= pickup_window_end:
+            return JsonResponse({
+                "error": "Pickup window end time must be after start time"
+            }, status=400)
+
+        available_till = data.get('available_till')
+        if available_till:
+            try:
+                available_till = datetime.strptime(available_till, '%Y-%m-%dT%H:%M:%S%z')
+                if available_till < datetime.now(timezone.utc):
+                    return JsonResponse({
+                        "error": "Available till date cannot be in the past"
+                    }, status=400)
+            except ValueError:
+                return JsonResponse({
+                    "error": "Invalid available_till format. Use ISO format with timezone"
+                }, status=400)
+        
         try:
             samaritan = Samaritan.objects.get(username=request.username)
         except Samaritan.DoesNotExist:
@@ -416,7 +453,6 @@ def donate_item(request):
                 "error": "Samaritan not found"
             }, status=404)
         
-        # Create the item
         item = Item.objects.create(
             category=category,
             description=data['description'],
@@ -426,7 +462,17 @@ def donate_item(request):
             weight_unit=data.get('weight_unit'),
             volume=volume if 'volume' in data else None,
             volume_unit=data.get('volume_unit'),
-            best_before=best_before if best_before else None
+            best_before=best_before if best_before else None,
+            pickup_window_start=pickup_window_start if pickup_window_start else None,
+            pickup_window_end=pickup_window_end if pickup_window_end else None,
+            available_till=available_till if available_till else None
+        )
+
+        print("ITEM AVAILABLE TILL : ", item.available_till)
+
+        make_inactive.apply_async(
+            (item.id,), 
+            countdown=(item.available_till-datetime.now(timezone.utc)).total_seconds()
         )
         
         return JsonResponse({
@@ -455,6 +501,12 @@ def donate_item(request):
                     "unit": item.volume_unit
                 } if item.volume is not None else None,
                 "best_before": item.best_before.isoformat() if item.best_before else None,
+                "pickup_window_start": item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
+                "pickup_window_end": item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
+                "available_till": item.available_till.isoformat() if item.available_till else None,
+                "is_active": item.is_active,
+                "is_reserved": item.is_reserved,
+                "is_picked_up": item.is_picked_up,
                 "created_at": item.created_at.isoformat() if hasattr(item, 'created_at') else None
             }
         }, status=201)
@@ -466,8 +518,7 @@ def donate_item(request):
     
 @csrf_exempt
 @token_required()
-def get_item_listings_for_organizations(request):
-
+def browse_item_listings(request):
     if request.user_type != 'organization':
         return JsonResponse({"error": "forbidden for samaritans"}, status=403)
     
@@ -514,26 +565,22 @@ def get_item_listings_for_organizations(request):
                 "valid_categories": dict(Item.CATEGORY_CHOICES)
             }, status=400)
         
+        # active, unreserved, not picked up items
         queryset = Item.objects.filter(
-            reserved_by__isnull=True,
-            is_picked_up=False,
-            reserved_till__isnull=True
+            pickup_location__distance_lte=(organization.location, D(m=radius_m)),
+            is_active=True,
+            is_reserved=False,
+            is_picked_up=False
         )
 
-        if category is not None:
+        if category is not None and category != 0:
             queryset = queryset.filter(category=category)
-        
-        try:
-            queryset = Item.objects.filter(pickup_location__distance_lte=(organization.location, D(m=radius_m)))
 
-            queryset = queryset.annotate(
-                distance=DistanceDBFunction('pickup_location', organization.location)
-            ).order_by('distance')
+        # Add distance annotation
+        queryset = queryset.annotate(
+            distance=DistanceDBFunction('pickup_location', organization.location)
+        ).order_by('distance')
 
-        except Exception as e:
-            print(f"Spatial query error: {str(e)}")
-            raise Exception(f"Error processing location query: {str(e)}")
-        
         try:
             paginator = Paginator(queryset, items_per_page)
             if page_number > paginator.num_pages and paginator.num_pages > 0:
@@ -541,9 +588,7 @@ def get_item_listings_for_organizations(request):
             page_obj = paginator.get_page(page_number)
         except Exception as e:
             return JsonResponse({"error": f"Pagination error: {str(e)}"}, status=500)
-        
-        print("Pagination Complete")
-        
+
         items_data = []
         for item in page_obj:
             try:
@@ -562,7 +607,10 @@ def get_item_listings_for_organizations(request):
                     'posted_by': {
                         'id': item.posted_by.id,
                         'username': item.posted_by.username
-                    }
+                    },
+                    'pickup_window_start': item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
+                    'pickup_window_end': item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
+                    'available_till': item.available_till.isoformat() if item.available_till else None
                 }
                 
                 if item.weight is not None:
@@ -580,16 +628,13 @@ def get_item_listings_for_organizations(request):
                 if item.best_before is not None:
                     item_data['best_before'] = item.best_before.isoformat()
                 
-                if item.pickup_time is not None:
-                    item_data['pickup_time'] = item.pickup_time.isoformat()
-                
                 items_data.append(item_data)
-                
+            
             except Exception as e:
                 return JsonResponse({
                     "error": f"Error processing item data: {str(e)}"
                 }, status=500)
-        
+
         return JsonResponse({
             "page": page_number,
             "total_pages": paginator.num_pages,
@@ -602,7 +647,7 @@ def get_item_listings_for_organizations(request):
     except Exception as e:
         return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
 
-
+@csrf_exempt
 @token_required()
 def get_samaritan_items(request, username):
     if request.user_type != 'samaritan':
@@ -624,7 +669,7 @@ def get_samaritan_items(request, username):
             return JsonResponse({"error": "Invalid page number"}, status=400)
 
         try:
-            samaritan = Samaritan.objects.get(user__username=request.username)
+            samaritan = Samaritan.objects.get(username=username)
         except Samaritan.DoesNotExist:
             return JsonResponse({"error": "Samaritan not found"}, status=404)
 
@@ -646,29 +691,26 @@ def get_samaritan_items(request, username):
             }, status=400)
 
         all_items = Item.objects.filter(posted_by=samaritan)
-        if category is not None:
+        if category is not None and category != 0:
             all_items = all_items.filter(category=category)
 
-        picked_up_items = all_items.filter(is_picked_up=True)
-        not_picked_up_items = all_items.filter(is_picked_up=False)
+        active_items = all_items.filter(is_active=True).order_by('-created_at')
+        inactive_items = all_items.filter(is_active=False).order_by('-created_at')
 
         try:
-            picked_up_paginator = Paginator(picked_up_items, items_per_page)
-            not_picked_up_paginator = Paginator(not_picked_up_items, items_per_page)
+            active_paginator = Paginator(active_items, items_per_page)
+            inactive_paginator = Paginator(inactive_items, items_per_page)
             
-            if  (page_number > picked_up_paginator.num_pages and picked_up_paginator.num_pages > 0) or \
-                (page_number > not_picked_up_paginator.num_pages and not_picked_up_paginator.num_pages > 0):
+            if  (page_number > active_paginator.num_pages and active_paginator.num_pages > 0) or \
+                (page_number > inactive_paginator.num_pages and inactive_paginator.num_pages > 0):
                 return JsonResponse({"error": "Page number exceeds available pages"}, status=404)
             
-            picked_up_page = picked_up_paginator.get_page(page_number)
-            not_picked_up_page = not_picked_up_paginator.get_page(page_number)
+            active_page = active_paginator.get_page(page_number)
+            inactive_page = inactive_paginator.get_page(page_number)
         except Exception as e:
             return JsonResponse({"error": f"Pagination error: {str(e)}"}, status=500)
 
-        picked_up_data = []
-        not_picked_up_data = []
-
-        for item in picked_up_page:
+        def serialize_item(item):
             try:
                 item_data = {
                     'id': item.id,
@@ -681,54 +723,20 @@ def get_samaritan_items(request, username):
                         'latitude': item.pickup_location.y,
                         'longitude': item.pickup_location.x
                     },
-                    'picked_up_by': {
-                        'id': item.picked_up_by.id,
-                        'name': item.picked_up_by.name
-                    } if item.picked_up_by else None,
-                    'scheduled_pickup_time': item.scheduled_pickup_time.isoformat() if item.scheduled_pickup_time else None
-                }
-
-                if item.weight is not None:
-                    item_data['weight'] = {
-                        'value': float(item.weight),
-                        'unit': item.weight_unit
-                    }
-
-                if item.volume is not None:
-                    item_data['volume'] = {
-                        'value': float(item.volume),
-                        'unit': item.volume_unit
-                    }
-
-                if item.best_before is not None:
-                    item_data['best_before'] = item.best_before.isoformat()
-
-                picked_up_data.append(item_data)
-
-            except Exception as e:
-                return JsonResponse({
-                    "error": f"Error processing picked up item data: {str(e)}"
-                }, status=500)
-
-        for item in not_picked_up_page:
-            try:
-                item_data = {
-                    'id': item.id,
-                    'category': {
-                        'id': item.category,
-                        'name': dict(Item.CATEGORY_CHOICES)[item.category]
-                    },
-                    'description': item.description,
-                    'pickup_location': {
-                        'latitude': item.pickup_location.y,
-                        'longitude': item.pickup_location.x
-                    },
+                    'is_active': item.is_active,
                     'is_reserved': item.is_reserved,
+                    'is_picked_up': item.is_picked_up,
                     'reserved_by': {
                         'id': item.reserved_by.id,
                         'name': item.reserved_by.name
                     } if item.reserved_by else None,
-                    'reserved_till': item.reserved_till.isoformat() if item.reserved_till else None
+                    'picked_up_by': {
+                        'id': item.picked_up_by.id,
+                        'name': item.picked_up_by.name
+                    } if item.picked_up_by else None,
+                    'pickup_window_start': item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
+                    'pickup_window_end': item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
+                    'available_till': item.available_till.isoformat() if item.available_till else None
                 }
 
                 if item.weight is not None:
@@ -746,24 +754,31 @@ def get_samaritan_items(request, username):
                 if item.best_before is not None:
                     item_data['best_before'] = item.best_before.isoformat()
 
-                not_picked_up_data.append(item_data)
+                return item_data
 
             except Exception as e:
-                return JsonResponse({
-                    "error": f"Error processing not picked up item data: {str(e)}"
-                }, status=500)
+                raise Exception(f"Error processing item data: {str(e)}")
+
+        active_data = []
+        inactive_data = []
+
+        for item in active_page:
+            active_data.append(serialize_item(item))
+
+        for item in inactive_page:
+            inactive_data.append(serialize_item(item))
 
         response_data = {
             "page": page_number,
-            "picked_up_items": {
-                "total_pages": picked_up_paginator.num_pages,
-                "total_items": picked_up_paginator.count,
-                "items": picked_up_data
+            "active_items": {
+                "total_pages": active_paginator.num_pages,
+                "total_items": active_paginator.count,
+                "items": active_data
             },
-            "not_picked_up_items": {
-                "total_pages": not_picked_up_paginator.num_pages,
-                "total_items": not_picked_up_paginator.count,
-                "items": not_picked_up_data
+            "inactive_items": {
+                "total_pages": inactive_paginator.num_pages,
+                "total_items": inactive_paginator.count,
+                "items": inactive_data
             }
         }
 
@@ -773,9 +788,9 @@ def get_samaritan_items(request, username):
         return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
 
 @token_required()
-def get_organization_items(request):
+def get_organization_items(request, username):
     if request.user_type != 'organization':
-        return JsonResponse({"error": "forbidden for samaritans"}, status=403)
+        return JsonResponse({'error': 'forbidden for samaritans'}, status=403)
 
     try:
         try:
@@ -793,7 +808,7 @@ def get_organization_items(request):
             return JsonResponse({"error": "Invalid page number"}, status=400)
 
         try:
-            organization = Organization.objects.get(user__username=request.user.username)
+            organization = Organization.objects.get(username=username)
         except Organization.DoesNotExist:
             return JsonResponse({"error": "Organization not found"}, status=404)
 
@@ -813,17 +828,20 @@ def get_organization_items(request):
                 "valid_categories": dict(Item.CATEGORY_CHOICES)
             }, status=400)
 
+        # Query for reserved but not picked up items
         reserved_items = Item.objects.filter(
             reserved_by=organization,
+            is_reserved=True,
             is_picked_up=False
-        ).order_by('-reserved_till')
+        ).order_by('-available_till')
 
+        # Query for picked up items
         picked_up_items = Item.objects.filter(
             picked_up_by=organization,
             is_picked_up=True
-        ).order_by('-scheduled_pickup_time')
+        ).order_by('-available_till')
 
-        if category is not None:
+        if category is not None and category != 0:
             reserved_items = reserved_items.filter(category=category)
             picked_up_items = picked_up_items.filter(category=category)
 
@@ -840,113 +858,217 @@ def get_organization_items(request):
         except Exception as e:
             return JsonResponse({"error": f"Pagination error: {str(e)}"}, status=500)
 
-        reserved_data = []
-        for item in reserved_page:
-            try:
-                item_data = {
-                    'id': item.id,
-                    'category': {
-                        'id': item.category,
-                        'name': dict(Item.CATEGORY_CHOICES)[item.category]
-                    },
-                    'description': item.description,
-                    'pickup_location': {
-                        'latitude': item.pickup_location.y,
-                        'longitude': item.pickup_location.x
-                    },
-                    'posted_by': {
-                        'id': item.posted_by.id,
-                        'username': item.posted_by.user.username
-                    },
-                    'reserved_till': item.reserved_till.isoformat() if item.reserved_till else None
+        def serialize_item(item):
+            item_data = {
+                'id': item.id,
+                'category': {
+                    'id': item.category,
+                    'name': dict(Item.CATEGORY_CHOICES)[item.category]
+                },
+                'description': item.description,
+                'pickup_location': {
+                    'latitude': item.pickup_location.y,
+                    'longitude': item.pickup_location.x
+                },
+                'posted_by': {
+                    'id': item.posted_by.id,
+                    'username': item.posted_by.username
+                },
+                'is_active': item.is_active,
+                'is_reserved': item.is_reserved,
+                'is_picked_up': item.is_picked_up,
+                'pickup_window_start': item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
+                'pickup_window_end': item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
+                'available_till': item.available_till.isoformat() if item.available_till else None
+            }
+
+            if item.weight is not None:
+                item_data['weight'] = {
+                    'value': float(item.weight),
+                    'unit': item.weight_unit
                 }
 
-                if item.weight is not None:
-                    item_data['weight'] = {
-                        'value': float(item.weight),
-                        'unit': item.weight_unit
-                    }
-
-                if item.volume is not None:
-                    item_data['volume'] = {
-                        'value': float(item.volume),
-                        'unit': item.volume_unit
-                    }
-
-                if item.best_before is not None:
-                    item_data['best_before'] = item.best_before.isoformat()
-
-                if hasattr(item, 'distance'):
-                    item_data['distance_km'] = round(item.distance.km, 2)
-
-                reserved_data.append(item_data)
-
-            except Exception as e:
-                return JsonResponse({
-                    "error": f"Error processing reserved item data: {str(e)}"
-                }, status=500)
-
-        picked_up_data = []
-        for item in picked_up_page:
-            try:
-                item_data = {
-                    'id': item.id,
-                    'category': {
-                        'id': item.category,
-                        'name': dict(Item.CATEGORY_CHOICES)[item.category]
-                    },
-                    'description': item.description,
-                    'pickup_location': {
-                        'latitude': item.pickup_location.y,
-                        'longitude': item.pickup_location.x
-                    },
-                    'posted_by': {
-                        'id': item.posted_by.id,
-                        'username': item.posted_by.user.username
-                    },
-                    'scheduled_pickup_time': item.scheduled_pickup_time.isoformat() if item.scheduled_pickup_time else None
+            if item.volume is not None:
+                item_data['volume'] = {
+                    'value': float(item.volume),
+                    'unit': item.volume_unit
                 }
 
-                if item.weight is not None:
-                    item_data['weight'] = {
-                        'value': float(item.weight),
-                        'unit': item.weight_unit
-                    }
+            if item.best_before is not None:
+                item_data['best_before'] = item.best_before.isoformat()
 
-                if item.volume is not None:
-                    item_data['volume'] = {
-                        'value': float(item.volume),
-                        'unit': item.volume_unit
-                    }
+            if hasattr(item, 'distance'):
+                item_data['distance_km'] = round(item.distance.km, 2)
 
-                if item.best_before is not None:
-                    item_data['best_before'] = item.best_before.isoformat()
-
-                if hasattr(item, 'distance'):
-                    item_data['distance_km'] = round(item.distance.km, 2)
-
-                picked_up_data.append(item_data)
-
-            except Exception as e:
-                return JsonResponse({
-                    "error": f"Error processing picked up item data: {str(e)}"
-                }, status=500)
+            return item_data
 
         response_data = {
             "page": page_number,
             "reserved_items": {
                 "total_pages": reserved_paginator.num_pages,
                 "total_items": reserved_paginator.count,
-                "items": reserved_data
+                "items": [serialize_item(item) for item in reserved_page]
             },
             "picked_up_items": {
                 "total_pages": picked_up_paginator.num_pages,
                 "total_items": picked_up_paginator.count,
-                "items": picked_up_data
+                "items": [serialize_item(item) for item in picked_up_page]
             }
         }
 
         return JsonResponse(response_data, status=200)
 
+    except Exception as e:
+        return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
+
+@csrf_exempt
+@token_required()
+def reserve_item(request, item_id):
+    """
+    Allow an organization to reserve an available item.
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+        
+    if request.user_type != 'organization':
+        return JsonResponse({"error": "Only organizations can reserve items"}, status=403)
+        
+    try:
+        with transaction.atomic():
+            try:
+                organization = Organization.objects.get(username=request.username)
+            except Organization.DoesNotExist:
+                return JsonResponse({"error": "Organization not found"}, status=404)
+            
+            try:
+                item = Item.objects.select_for_update().get(id=item_id)
+            except Item.DoesNotExist:
+                return JsonResponse({"error": "Item not found"}, status=404)
+            
+            if not item.is_active:
+                return JsonResponse({"error": "Item is not active"}, status=400)
+                
+            if item.is_reserved:
+                return JsonResponse({"error": "Item is already reserved"}, status=400)
+                
+            if item.is_picked_up:
+                return JsonResponse({"error": "Item is already picked up"}, status=400)
+                
+            if item.available_till and item.available_till <= datetime.now(timezone.utc):
+                return JsonResponse({"error": "Item is no longer available"}, status=400)
+            
+            item.is_reserved = True
+            item.reserved_by = organization
+            item.save(update_fields=['is_reserved', 'reserved_by'])
+            
+            return JsonResponse({
+                "message": "Item reserved successfully",
+                "item": {
+                    "id": item.id,
+                    "category": {
+                        "id": item.category,
+                        "name": dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    "description": item.description,
+                    "pickup_location": {
+                        "latitude": item.pickup_location.y,
+                        "longitude": item.pickup_location.x
+                    },
+                    "is_active": item.is_active,
+                    "is_reserved": item.is_reserved,
+                    "is_picked_up": item.is_picked_up,
+                    "reserved_by": {
+                        "id": organization.id,
+                        "username": organization.username
+                    },
+                    "pickup_window_start": item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
+                    "pickup_window_end": item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
+                    "available_till": item.available_till.isoformat() if item.available_till else None
+                }
+            }, status=200)
+            
+    except Exception as e:
+        return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
+
+@csrf_exempt
+@token_required()
+def pickup_item(request, item_id):
+    """
+    Allow either the organization that reserved the item or the samaritan to mark an item as picked up.
+    The item can only be marked as picked up by the organization that reserved it.
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+        
+    if request.user_type not in ['organization', 'samaritan']:
+        return JsonResponse({"error": "Invalid user type"}, status=403)
+        
+    try:
+        with transaction.atomic():
+            # Get and lock the item for update
+            try:
+                item = Item.objects.select_for_update().get(id=item_id)
+            except Item.DoesNotExist:
+                return JsonResponse({"error": "Item not found"}, status=404)
+            
+            # Validate item state
+            if not item.is_active:
+                return JsonResponse({"error": "Item is not active"}, status=400)
+                
+            if not item.is_reserved:
+                return JsonResponse({"error": "Item is not reserved"}, status=400)
+                
+            if item.is_picked_up:
+                return JsonResponse({"error": "Item is already marked as picked up"}, status=400)
+
+            # Check permissions based on user type
+            if request.user_type == 'organization':
+                try:
+                    organization = Organization.objects.get(username=request.username)
+                    # Check if this organization is the one that reserved it
+                    if item.reserved_by != organization:
+                        return JsonResponse({
+                            "error": "Only the organization that reserved this item can mark it as picked up"
+                        }, status=403)
+                except Organization.DoesNotExist:
+                    return JsonResponse({"error": "Organization not found"}, status=404)
+            else:  # samaritan
+                try:
+                    samaritan = Samaritan.objects.get(username=request.username)
+                    if item.posted_by != samaritan:
+                        return JsonResponse({"error": "Not authorized to mark this item as picked up"}, status=403)
+                except Samaritan.DoesNotExist:
+                    return JsonResponse({"error": "Samaritan not found"}, status=404)
+            
+            # Mark as picked up - automatically set picked_up_by to the reserving organization
+            item.is_picked_up = True
+            item.picked_up_by = item.reserved_by
+            # item.picked_up_at = datetime.now(timezone.utc)
+            item.save(update_fields=['is_picked_up', 'picked_up_by']) #'picked_up_at'
+            
+            return JsonResponse({
+                "message": "Item marked as picked up successfully",
+                "item": {
+                    "id": item.id,
+                    "category": {
+                        "id": item.category,
+                        "name": dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    "description": item.description,
+                    "is_active": item.is_active,
+                    "is_reserved": item.is_reserved,
+                    "is_picked_up": item.is_picked_up,
+                    "reserved_by": {
+                        "id": item.reserved_by.id,
+                        "username": item.reserved_by.username
+                    },
+                    "picked_up_by": {
+                        "id": item.picked_up_by.id,
+                        "username": item.picked_up_by.username
+                    },
+                    # "picked_up_at": item.picked_up_at.isoformat()
+                }
+            }, status=200)
+            
     except Exception as e:
         return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)

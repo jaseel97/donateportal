@@ -1,7 +1,8 @@
+from datetime import datetime, timedelta, timezone
 import re
 
 from django.db import models
-from django.utils import timezone
+# from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.contrib.gis.db import models as gis_models
@@ -56,16 +57,17 @@ class Samaritan(User):
 
 class Item(models.Model):
     CATEGORY_CHOICES = [
-        (0, 'Food'),
-        (1, 'Clothes'),
-        (2, 'Books'),
-        (3, 'Furniture'),
-        (4, 'Household Items'),
-        (5, 'Electronics'),
-        (6, 'Toys'),
-        (7, 'Medical Supplies'),
-        (8, 'Pet Supplies'),
-        (9, 'Others'),
+        (0, 'All'),
+        (1, 'Food'),
+        (2, 'Clothes'),
+        (3, 'Books'),
+        (4, 'Furniture'),
+        (5, 'Household Items'),
+        (6, 'Electronics'),
+        (7, 'Toys'),
+        (8, 'Medical Supplies'),
+        (9, 'Pet Supplies'),
+        (10, 'Others'),
     ]
     
     category = models.IntegerField(choices=CATEGORY_CHOICES)
@@ -76,12 +78,18 @@ class Item(models.Model):
     volume_unit = models.CharField(max_length=50, blank=True, null=True)
     best_before = models.DateField(blank=True, null=True)
     pickup_location = gis_models.PointField()
-    reserved_till = models.DateTimeField(blank=True, null=True)
+
     posted_by = models.ForeignKey(
         Samaritan,
         on_delete=models.CASCADE,
         related_name="posted_items"
     )
+    pickup_window_start = models.TimeField(blank=True, null=True)
+    pickup_window_end = models.TimeField(blank=True, default=True)
+
+    is_active = models.BooleanField(default=True)
+
+    available_till = models.DateTimeField(default=datetime.now(timezone.utc)+timedelta(days=14))
 
     is_reserved = models.BooleanField(default=False)
     reserved_by = models.ForeignKey(
@@ -93,7 +101,6 @@ class Item(models.Model):
     )
     
     is_picked_up = models.BooleanField(default=False)
-    scheduled_pickup_time = models.DateTimeField(blank=True, null=True)
     picked_up_by = models.ForeignKey(
         Organization,
         on_delete=models.SET_NULL,
@@ -101,3 +108,6 @@ class Item(models.Model):
         null=True,
         related_name="picked_up_items"
     )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

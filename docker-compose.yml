@@ -26,6 +26,30 @@ services:
     networks:
       - donate-network
 
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    env_file:
+      - ./${ENV-dev}.env
+    networks:
+      - donate-network
+
+  celery-worker:
+    build:
+      context: ./backend
+    volumes:
+      - ./backend:/app
+    command: celery -A djangotango worker --beat --loglevel=info
+    depends_on:
+      - postgres
+      - redis
+      - django-app
+    env_file:
+      - ./${ENV-dev}.env
+    networks:
+      - donate-network
+
   nginx:
     build:
       context: ./frontend

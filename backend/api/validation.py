@@ -83,7 +83,7 @@ def validate_category(category_data):
     Validate item category value.
     Returns (is_valid, error_message, valid_categories_dict)
     """
-    if not category_data :
+    if category_data is None :
         return False, "Category is required", dict(Item.CATEGORY_CHOICES)
 
     try:

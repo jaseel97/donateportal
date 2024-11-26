@@ -136,3 +136,7 @@ AUTH_USER_MODEL = 'api.User'
 JWT_SECRET = os.getenv('JWT_SECRET', 'your-fallback-secret-key')
 JWT_EXPIRATION_DAYS = int(os.getenv('JWT_EXPIRATION_DAYS', '1'))
 JWT_EXPIRATION_DELTA = timedelta(days=JWT_EXPIRATION_DAYS)
+
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL','redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND','redis://redis:6379/0')
+CELERY_IMPORTS = ('api.tasks',)
