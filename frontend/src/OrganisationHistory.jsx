@@ -1,10 +1,7 @@
-import React from 'react';
-import { XMarkIcon } from '@heroicons/react/24/solid';
-import Modal from './Modal';
+import React, { useState } from 'react';
 
 const StatusBadge = ({ status }) => {
   const statusStyles = {
-    'Donation Offered': 'bg-green-100 text-green-800',
     'Reserved': 'bg-red-100 text-red-800',
     'Picked Up': 'bg-blue-100 text-blue-800'
   };
@@ -17,13 +14,10 @@ const StatusBadge = ({ status }) => {
 };
 
 const OrganisationHistory = ({ donations, categories }) => {
-  const [selectedItem, setSelectedItem] = React.useState(null);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-
-  const openItemDetails = (item) => {
-    setSelectedItem(item);
-    setIsModalOpen(true);
-  };
+  const [filters, setFilters] = useState({
+    picked: false,
+    reserved: true
+  });
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('en-US', {
@@ -35,103 +29,117 @@ const OrganisationHistory = ({ donations, categories }) => {
     });
   };
 
+  const filteredDonations = donations.filter(donation => {
+    if (filters.picked && filters.reserved) {
+      return donation.status === 'Reserved' || donation.status === 'Picked Up';
+    } else if (filters.picked) {
+      return donation.status === 'Picked Up';
+    } else if (filters.reserved) {
+      return donation.status === 'Reserved';
+    }
+    return true;
+  });
+
+  const handleFilterChange = (filterName) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: !prev[filterName]
+    }));
+  };
+
   return (
     <div className="w-full bg-white p-6 rounded-lg shadow-sm">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Received History</h2>
-      <p className="text-sm text-center text-gray-500 mb-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">History</h2>
+      <p className="text-sm text-center text-gray-500 mb-4">
         Track your received donations
       </p>
 
-      <div className="space-y-4">
-        {donations.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No donations received yet</p>
-        ) : (
-          donations.map(item => (
-            <div
-              key={item.id}
-              onClick={() => openItemDetails(item)}
-              className="group relative flex items-center space-x-3 bg-white border rounded-lg p-4 hover:shadow-lg cursor-pointer transition-all duration-300 ease-in-out hover:border-blue-200"
-            >
-              <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-md overflow-hidden">
-                {item.images && item.images[0] && (
-                  <img
-                    src={URL.createObjectURL(item.images[0])}
-                    alt=""
-                    className="w-full h-full object-cover transform transition-transform duration-300 group-hover:scale-110"
-                  />
-                )}
-              </div>
+      {/* Filter Checkboxes */}
+      <div className="flex justify-center space-x-6 mb-6">
+      <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={filters.reserved}
+            onChange={() => handleFilterChange('reserved')}
+            className="form-checkbox h-4 w-4 text-sky-500 rounded border-2 border-indigo-200 
+                       focus:ring-sky-500 focus:ring-2 focus:ring-offset-2 
+                       transition-colors duration-200"
+          />
+          <span className="text-sm text-gray-600">Reserved</span>
+        </label>
 
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-medium text-gray-900 capitalize group-hover:text-blue-600 transition-colors duration-300">
-                  {categories.find(cat => cat.id === item.category)?.name}
-                </h3>
-                <p className="text-sm text-gray-500 truncate group-hover:text-gray-700 transition-colors duration-300">
-                  {item.about}
-                </p>
-                <div className="mt-1">
-                  <StatusBadge status={item.status || 'processing'} />
-                </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  {formatDate(item.pickupDate)}
-                </p>
-
-                <div className="absolute inset-0 border-2 border-blue-500 opacity-0 group-hover:opacity-100 rounded-lg transition-opacity duration-300" />
-              </div>
-            </div>
-          ))
-        )}
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={filters.picked}
+            onChange={() => handleFilterChange('picked')}
+            className="form-checkbox h-4 w-4 text-sky-500 rounded border-2 border-indigo-200 
+                       focus:ring-sky-500 focus:ring-2 focus:ring-offset-2 
+                       transition-colors duration-200"
+          />
+          <span className="text-sm text-gray-600">Picked Up</span>
+        </label>
+      
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        {selectedItem && (
-          <>
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {categories.find(cat => cat.id === selectedItem.category)?.name}
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">Donation details and status</p>
-                </div>
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-500 transition-colors duration-200"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="px-6 py-4">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">Description</h4>
-                  <p className="mt-1 text-sm text-gray-500">{selectedItem.about}</p>
+      <div className="space-y-6">
+        {filteredDonations.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">No donations received yet</p>
+        ) : (
+          filteredDonations.map(item => (
+            <div
+              key={item.id}
+              className="bg-white border-2 border-indigo-200 rounded-lg p-6 
+                         hover:border-indigo-300 hover:bg-gradient-to-r hover:from-white/90 
+                         hover:to-indigo-50/90 hover:scale-[1.01] hover:shadow-md 
+                         transition-all duration-300"
+            >
+              <div className="space-y-3">
+                {/* Category Line */}
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-700 w-24">Category:</span>
+                  <span className="text-sm text-gray-600">
+                    {categories.find(cat => cat.id === item.category)?.name || 'Unknown'}
+                  </span>
                 </div>
 
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">Status</h4>
-                  <div className="mt-1">
-                    <StatusBadge status={selectedItem.status} />
+                {/* Status Line */}
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-700 w-24">Status:</span>
+                  <StatusBadge status={item.status || 'processing'} />
+                </div>
+
+                {/* Description Line */}
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-700 w-24">Description:</span>
+                  <span className="text-sm text-gray-600">{item.about || 'No description available'}</span>
+                </div>
+
+                {/* Date Line */}
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-700 w-24">Date:</span>
+                  <span className="text-sm text-gray-600">{formatDate(item.pickupDate)}</span>
+                </div>
+
+                {/* Best Before Line (if available) */}
+                {item.bestBefore && (
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-700 w-24">Best Before:</span>
+                    <span className="text-sm text-gray-600">{formatDate(item.bestBefore)}</span>
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">Pickup Date</h4>
-                  <p className="mt-1 text-sm text-gray-500">{formatDate(selectedItem.pickupDate)}</p>
-                </div>
-
-                {selectedItem.images && selectedItem.images.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Images</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedItem.images.map((image, index) => (
+                {/* Images Section (if available) */}
+                {item.images && item.images.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Images</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      {item.images.map((image, index) => (
                         <img
                           key={index}
                           src={URL.createObjectURL(image)}
                           alt={`Item ${index + 1}`}
-                          className="rounded-lg w-full h-48 object-cover"
+                          className="rounded-lg w-full h-24 object-cover"
                         />
                       ))}
                     </div>
@@ -139,9 +147,9 @@ const OrganisationHistory = ({ donations, categories }) => {
                 )}
               </div>
             </div>
-          </>
+          ))
         )}
-      </Modal>
+      </div>
     </div>
   );
 };
