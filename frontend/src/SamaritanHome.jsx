@@ -22,13 +22,13 @@ export default function SamaritanHome() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
-      <div className="max-w-7xl mx-auto p-6">
+    <div className="min-h-screen w-full max-w-7xl bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
+      <div className="mx-auto p-6">
         <h1 className="text-3xl font-bold text-sky-900 text-center mb-8 animate-slideDown">
           Samaritan Donation Portal
         </h1>
         
-        <div className="flex gap-6 max-w-7xl w-full mx-auto ">
+        <div className="flex gap-6 w-full mx-auto ">
           <div className="flex-grow animate-slideInLeft hover:scale-[1.01] transition-transform duration-300 ">
             <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
               <DonationForm onSubmit={handleDonationSubmit} />

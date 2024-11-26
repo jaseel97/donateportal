@@ -9,7 +9,10 @@ const DonationForm = ({ onSubmit }) => {
     category: '',
     about: '',
     images: [],
-    pickupDate: ''
+    pickupDate: '',
+    weight: '',
+    volume: '',
+    bestBefore: ''
   });
 
   const categories = {
@@ -54,12 +57,15 @@ const DonationForm = ({ onSubmit }) => {
       category: '',
       about: '',
       images: [],
-      pickupDate: ''
+      pickupDate: '',
+      weight: '',
+      volume: '',
+      bestBefore: ''
     });
   };
 
   return (
-    <div className="flex-1 w-full bg-white p-6 rounded-lg shadow-sm ">
+    <div className="flex-1 w-full bg-white p-6 rounded-lg shadow-sm">
       <form onSubmit={handleSubmit}>
         <div className="space-y-12">
           <div>
@@ -69,12 +75,16 @@ const DonationForm = ({ onSubmit }) => {
                 value={formData.category}
                 onChange={handleInputChange}
                 categories={categories}
-                
               />
-              <DatePicker
-                value={formData.pickupDate}
-                onChange={handleInputChange}
-              />
+              <div className="mb-6">
+                <label htmlFor="pickupDate" className="block text-sm font-medium text-gray-700 mb-2">
+                  Preferred Pickup Date
+                </label>
+                <DatePicker
+                  value={formData.pickupDate}
+                  onChange={handleInputChange}
+                />
+              </div>
             </div>
             <div className="mb-6">
               <label htmlFor="donation-description" className="block text-sm font-medium text-gray-700 mb-2">
@@ -91,51 +101,55 @@ const DonationForm = ({ onSubmit }) => {
                 required
               />
             </div>
+            
+            {/* Weight and Volume inputs in one line */}
+            <div className="flex gap-6 mb-6">
+              <div className="flex-1">
+                <label htmlFor="weight" className="block text-sm font-medium text-gray-700 mb-2">
+                  Weight (g)
+                </label>
+                <input
+                  type="number"
+                  id="weight"
+                  name="weight"
+                  value={formData.weight}
+                  onChange={handleInputChange}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter weight"
+                  min="0"
+                  step="0.1"
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="volume" className="block text-sm font-medium text-gray-700 mb-2">
+                  Volume (m³)
+                </label>
+                <input
+                  type="number"
+                  id="volume"
+                  name="volume"
+                  value={formData.volume}
+                  onChange={handleInputChange}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter volume"
+                  min="0"
+                  step="1.0"
+                />
+              </div>
+            </div>
+
+            {/* Best Before Date */}
             <div className="mb-6">
-              <label htmlFor="pickup-location" className="block text-sm font-medium text-gray-700 mb-2">
-              Pickup Location
+              <label htmlFor="bestBefore" className="block text-sm font-medium text-gray-700 mb-2">
+                Best Before
               </label>
-              <textarea
-                id="pickup-location"
-                name="Pickup-Location"
-                rows={3}
-                value={formData.about}
+              <DatePicker
+                name="bestBefore"
+                value={formData.bestBefore}
                 onChange={handleInputChange}
-                className="textareastyle resize-none h-16"
-                placeholder="Provide the Pickup Location"
-                required
               />
             </div>
-            <div className='flex gap-4'>
-            <div className="mb-6">
-              <label htmlFor="weight" className="block text-sm font-medium text-gray-700 mb-2">
-              Weight
-              </label>
-              <textarea
-                id="weight"
-                name="weight"
-                rows={3}
-                value={formData.about}
-                onChange={handleInputChange}
-                className="textareastyle resize-none h-16"
-                placeholder="Weight"
-              />
-            </div>
-            <div className="mb-6">
-              <label htmlFor="volume" className="block text-sm font-medium text-gray-700 mb-2">
-              Volume
-              </label>
-              <textarea
-                id="volume"
-                name="volume"
-                rows={3}
-                value={formData.about}
-                onChange={handleInputChange}
-                className="textareastyle resize-none h-16"
-                placeholder="Volume"
-              />
-            </div>
-            </div>
+
             <UploadImage 
               images={formData.images}
               onChange={handleImageChange}

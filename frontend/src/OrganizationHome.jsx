@@ -17,8 +17,7 @@ function OrganizationHome() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [itemsPerPage] = useState(9);
-    const [receivedDonations] = useState([
-        // Sample data - replace with actual API data
+    const [receivedDonations, setReceivedDonations] = useState([
         {
             id: 1,
             category: 'clothes',
@@ -39,12 +38,19 @@ function OrganizationHome() {
         },
     ]);
 
-    // Categories for OrganisationHistory
     const categoryList = [
         { id: 'clothes', name: 'Clothes' },
         { id: 'food', name: 'Food' },
         { id: 'toys', name: 'Toys' },
         { id: 'others', name: 'Others' }
+    ];
+
+    const proximityOptions = [
+        { label: "All", value: "" },
+        { label: "5 km", value: 5 },
+        { label: "10 km", value: 10 },
+        { label: "20 km", value: 20 },
+        { label: "50 km", value: 50 },
     ];
 
     useEffect(() => {
@@ -75,6 +81,7 @@ function OrganizationHome() {
                 params,
                 withCredentials: true
             });
+            
             const mappedItems = response.data.items.map(item => ({
                 id: item.id,
                 category: item.category?.id,
@@ -88,6 +95,7 @@ function OrganizationHome() {
                 distanceKm: item?.distance_km,
                 bestBefore: item?.best_before
             }));
+            
             setItems(mappedItems);
             setTotalPages(response.data.total_pages);
         } catch (error) {
@@ -105,14 +113,6 @@ function OrganizationHome() {
             setCurrentPage(newPage);
         }
     };
-
-    const proximityOptions = [
-        { label: "All", value: "" },
-        { label: "5 km", value: 5 },
-        { label: "10 km", value: 10 },
-        { label: "20 km", value: 20 },
-        { label: "50 km", value: 50 },
-    ];
 
     const filteredItems = items.filter((item) => {
         const matchesSearch = item.description.toLowerCase().includes(search.toLowerCase());
@@ -135,14 +135,12 @@ function OrganizationHome() {
 
     const handleReserve = async () => {
         try {
-            // Replace with your actual API endpoint and request
             await axios.post(`${apiDomain}/reserve`, {
                 itemId: selectedItem.id
             }, {
                 withCredentials: true
             });
 
-            // Update the received donations list
             const newDonation = {
                 id: selectedItem.id,
                 category: selectedItem.category,
@@ -156,7 +154,7 @@ function OrganizationHome() {
             setReceivedDonations(prev => [newDonation, ...prev]);
             closeModal();
             
-            // Optional: Show success message
+            // Show success message
             alert('Item reserved successfully!');
         } catch (error) {
             console.error("Error reserving item:", error);
@@ -173,19 +171,18 @@ function OrganizationHome() {
 
                 <div className="flex flex-col lg:flex-row gap-6 max-w-7xl w-full mx-auto">
                     <div className="flex-grow animate-slideInLeft">
-                        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+                        <div className="bg-white/90 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
                             {/* Filter Section */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                                {/* Filter by Category */}
+                                {/* Category Filter */}
                                 <div className="flex flex-col">
-                                    <label htmlFor="filter" className="font-medium mb-2">
+                                    <label className="categorylabel">
                                         Filter by Category:
                                     </label>
                                     <select
-                                        id="filter"
                                         value={filter}
                                         onChange={(e) => setFilter(e.target.value)}
-                                        className="p-2 border border-gray-300 rounded-md shadow-sm w-full"
+                                        className="categorystyle"
                                     >
                                         <option value="">All</option>
                                         {Object.keys(categories).map((categoryId) => (
@@ -196,45 +193,42 @@ function OrganizationHome() {
                                     </select>
                                 </div>
 
-                                {/* Search by Description */}
+                                {/* Search Input */}
                                 <div className="flex flex-col">
-                                    <label htmlFor="search" className="font-medium mb-2">
+                                    <label className="categorylabel">
                                         Search by Description:
                                     </label>
                                     <input
                                         type="text"
-                                        id="search"
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         placeholder="Search donations"
-                                        className="p-2 border border-gray-300 rounded-md shadow-sm w-full"
+                                        className="textareastyle"
                                     />
                                 </div>
 
-                                {/* Filter by Best Before */}
+                                {/* Date Filter */}
                                 <div className="flex flex-col">
-                                    <label htmlFor="pickupDate" className="font-medium mb-2">
+                                    <label className="categorylabel">
                                         Filter by Best Before:
                                     </label>
                                     <input
                                         type="date"
-                                        id="pickupDate"
                                         value={pickupDate}
                                         onChange={(e) => setPickupDate(e.target.value)}
-                                        className="p-2 border border-gray-300 rounded-md shadow-sm w-full"
+                                        className="textareastyle"
                                     />
                                 </div>
 
-                                {/* Filter by Proximity */}
+                                {/* Proximity Filter */}
                                 <div className="flex flex-col">
-                                    <label htmlFor="proximityFilter" className="font-medium mb-2">
+                                    <label className="categorylabel">
                                         Filter by Proximity:
                                     </label>
                                     <select
-                                        id="proximityFilter"
                                         value={proximityFilter}
                                         onChange={(e) => setProximityFilter(e.target.value)}
-                                        className="p-2 border border-gray-300 rounded-md shadow-sm w-full"
+                                        className="categorystyle"
                                     >
                                         {proximityOptions.map((option) => (
                                             <option key={option.value} value={option.value}>
@@ -245,15 +239,18 @@ function OrganizationHome() {
                                 </div>
                             </div>
 
-                            {/* Grid Section */}
+                            {/* Items Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                                 {filteredItems.map((item) => (
                                     <div
                                         key={item.id}
-                                        className="border border-gray-300 rounded-lg p-4 bg-white shadow-lg transition transform hover:-translate-y-2 hover:shadow-xl cursor-pointer"
                                         onClick={() => openModal(item)}
+                                        className="border-2 border-indigo-200 rounded-lg p-4 bg-white/85 
+                                                 hover:bg-gradient-to-r hover:from-white/90 hover:to-indigo-50/90 
+                                                 hover:border-indigo-300 hover:scale-[1.01] hover:shadow-md 
+                                                 transition-all duration-300 cursor-pointer"
                                     >
-                                        <h3 className="font-bold text-lg text-gray-800 mb-2">{item.description}</h3>
+                                        <h3 className="font-bold text-lg text-sky-800 mb-2">{item.description}</h3>
                                         <p className="text-sm text-gray-600">
                                             <strong>Category:</strong> {categories[item.category] || "Unknown"}
                                         </p>
@@ -275,25 +272,21 @@ function OrganizationHome() {
                                 <button
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
-                                    className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-                                        currentPage === 1 
-                                        ? 'bg-gray-200 cursor-not-allowed' 
-                                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                                    }`}
+                                    className={`button-base ${currentPage === 1 
+                                        ? 'bg-gray-300 cursor-not-allowed' 
+                                        : 'bg-sky-500 hover:bg-sky-600'}`}
                                 >
                                     Previous
                                 </button>
-                                <span className="text-gray-600">
+                                <span className="text-sky-800 font-medium">
                                     Page {currentPage} of {totalPages}
                                 </span>
                                 <button
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages}
-                                    className={`px-4 py-2 rounded-md transition-colors duration-200 ${
-                                        currentPage === totalPages 
-                                        ? 'bg-gray-200 cursor-not-allowed' 
-                                        : 'bg-blue-500 text-white hover:bg-blue-600'
-                                    }`}
+                                    className={`button-base ${currentPage === totalPages 
+                                        ? 'bg-gray-300 cursor-not-allowed' 
+                                        : 'bg-sky-500 hover:bg-sky-600'}`}
                                 >
                                     Next
                                 </button>
@@ -301,7 +294,7 @@ function OrganizationHome() {
                         </div>
                     </div>
 
-                    {/* Received History Section */}
+                    {/* History Section */}
                     <div className="w-full lg:w-96 animate-slideInRight hover:scale-[1.02] transition-transform duration-300">
                         <OrganisationHistory 
                             donations={receivedDonations} 
@@ -310,82 +303,22 @@ function OrganizationHome() {
                     </div>
                 </div>
 
-            {/* Modal */}
-            {isModalOpen && selectedItem && (
-                    <Modal isOpen={isModalOpen} onClose={closeModal}>
-                        <div className="bg-white rounded-lg overflow-hidden">
-                            <div className="px-6 py-4 border-b border-gray-200">
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        <h3 className="text-lg font-medium text-gray-900">
-                                            Donation Details
-                                        </h3>
-                                        <p className="mt-1 text-sm text-gray-500">
-                                            Review the details and reserve if interested
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={closeModal}
-                                        className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-                                    >
-                                        <XMarkIcon className="h-5 w-5" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="px-6 py-4">
-                                <div className="space-y-4">
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-900">Description</h4>
-                                        <p className="mt-1 text-sm text-gray-500">{selectedItem.description}</p>
-                                    </div>
-
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-900">Category</h4>
-                                        <p className="mt-1 text-sm text-gray-500">
-                                            {categories[selectedItem.category] || "Unknown"}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <h4 className="text-sm font-medium text-gray-900">Details</h4>
-                                        <div className="mt-2 text-sm text-gray-500 space-y-1">
-                                            <p>Posted By: {selectedItem.postedBy}</p>
-                                            <p>Distance: {selectedItem.distanceKm} Km</p>
-                                            <p>Weight: {selectedItem.weight} {selectedItem.weightUnit}</p>
-                                            <p>Volume: {selectedItem.volume} {selectedItem.volumeUnit}</p>
-                                            <p>Best Before: {new Date(selectedItem.bestBefore).toLocaleDateString()}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="pt-4 border-t border-gray-200">
-                                        <div className="flex justify-end space-x-3">
-                                            <button
-                                                onClick={closeModal}
-                                                className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                onClick={handleReserve}
-                                                className="px-4 py-2 rounded-md border border-transparent bg-blue-600 text-white hover:bg-blue-700 font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                            >
-                                                Reserve
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Modal>
+                {/* Modal */}
+                {isModalOpen && selectedItem && (
+                    <Modal 
+                        isOpen={isModalOpen}
+                        onClose={closeModal}
+                        selectedItem={selectedItem}
+                        categories={categories}
+                        onReserve={handleReserve}
+                    />
                 )}
-
-                <footer className="mt-12 text-center text-gray-500 text-sm animate-slideUp">
-                    <p>Together we can make a difference.</p>
-                </footer>
-            </div>
+<footer className="mt-12 text-center text-sky-600 text-sm animate-slideUp">
+    <p>Together we can make a difference.</p>
+</footer>
+</div>
         </div>
-            );
-        }
-        
-        export default OrganizationHome;
+    );
+}
+
+export default OrganizationHome;
