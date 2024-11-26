@@ -1,14 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
+import axios from 'axios';
+import { apiDomain } from "./Config";
 
 const Modal = ({ 
     isOpen, 
     onClose, 
     selectedItem, 
     categories, 
-    onReserve, 
     children 
 }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -19,6 +23,31 @@ const Modal = ({
             document.body.style.overflow = 'unset';
         };
     }, [isOpen]);
+
+    const handleReserve = async () => {
+        if (!selectedItem || !selectedItem.id) return;
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const response = await axios.post(`${apiDomain}/item/${selectedItem.id}/reserve`, {
+            }, {
+                headers: {
+                    "Content-Type": "application/json"
+                  },
+                withCredentials: true
+            });
+
+            if (response.status === 200) {
+                onReserve();
+                onClose();
+            }
+        } catch (err) {
+            setError(err.response ? err.response.data.message : err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     if (!isOpen || !selectedItem) return null;
 
@@ -90,12 +119,16 @@ const Modal = ({
                                         Cancel
                                     </button>
                                     <button
-                                        onClick={onReserve}
+                                        onClick={handleReserve}
                                         className="submitbutton"
+                                        disabled={isLoading}
                                     >
-                                        Reserve
+                                        {isLoading ? 'Reserving...' : 'Reserve'}
                                     </button>
                                 </div>
+                                {error && (
+                                    <p className="text-red-500 text-sm mt-2">{error}</p>
+                                )}
                             </div>
                         </div>
                     </div>

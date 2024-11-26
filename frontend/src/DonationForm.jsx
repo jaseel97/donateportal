@@ -64,23 +64,19 @@ const DonationForm = ({ onSubmit }) => {
     }));
   };
 
-  const formatToISOWithTimezone = (date) => {
-    const pad = (num) => String(num).padStart(2, '0');
-    
-    const year = date.getUTCFullYear();
-    const month = pad(date.getUTCMonth() + 1);
-    const day = pad(date.getUTCDate());
-    const hours = pad(date.getUTCHours());
-    const minutes = pad(date.getUTCMinutes());
-    const seconds = pad(date.getUTCSeconds());
-    
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+00:00`;
+  const convertToISO = (input) => {
+    const [datePart, startTime] = input.split(' ');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+    const isoDate = date.toISOString();
+    const [dateStr, timeStr] = isoDate.split('T');
+    const [time,] = timeStr.split('.');
+    return `${dateStr}T${time}+00:00`;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validate required fields
     const requiredFields = ['categoryID', 'about', 'pickupDate', 'bestBefore', 'availableTill', 'pickupLocation'];
     const missingFields = requiredFields.filter(field => !formData[field]);
     
@@ -103,11 +99,11 @@ const DonationForm = ({ onSubmit }) => {
       best_before: new Date(formData.bestBefore).toISOString().split('T')[0],
       pickup_window_start: formData.pickupWindowStart,
       pickup_window_end: formData.pickupWindowEnd,
-      available_till: formatToISOWithTimezone(new Date(formData.availableTill))
+      available_till: convertToISO(formData.availableTill)
     };
 
     try {
-      const response = await axios.post("http://localhost:8080/samaritan/donate", postData, {
+      const response = await axios.post(`${apiDomain}/samaritan/donate`, postData, {
         headers: {
           "Content-Type": "application/json"
         },
@@ -153,12 +149,12 @@ const DonationForm = ({ onSubmit }) => {
               required
             />
             <div className="mb-6">
-              <label htmlFor="pickupDate" className="categorylabel">
-              Available Till & Pickup Time*
+              <label htmlFor="availableTill" className="categorylabel">
+              Available Till*
               </label>
               <DatePicker
-                name="pickupDate"
-                value={formData.pickupDate}
+                name="availableTill"
+                value={formData.availableTill}
                 onChange={handleInputChange}
                 required
               />
