@@ -13,7 +13,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const OrganisationHistory = ({ donations, categories }) => {
+const OrganisationHistory = ({ donations, categories, onPickup }) => {
   const [filters, setFilters] = useState({
     picked: false,
     reserved: true
@@ -56,7 +56,7 @@ const OrganisationHistory = ({ donations, categories }) => {
 
       {/* Filter Checkboxes */}
       <div className="flex justify-center space-x-6 mb-6">
-      <label className="flex items-center space-x-2 cursor-pointer">
+        <label className="flex items-center space-x-2 cursor-pointer">
           <input
             type="checkbox"
             checked={filters.reserved}
@@ -79,7 +79,6 @@ const OrganisationHistory = ({ donations, categories }) => {
           />
           <span className="text-sm text-gray-600">Picked Up</span>
         </label>
-      
       </div>
 
       <div className="space-y-6">
@@ -92,7 +91,7 @@ const OrganisationHistory = ({ donations, categories }) => {
               className="bg-white border-2 border-indigo-200 rounded-lg p-6 
                          hover:border-indigo-300 hover:bg-gradient-to-r hover:from-white/90 
                          hover:to-indigo-50/90 hover:scale-[1.01] hover:shadow-md 
-                         transition-all duration-300"
+                         transition-all duration-300 relative"
             >
               <div className="space-y-3">
                 {/* Description Line */}
@@ -143,6 +142,18 @@ const OrganisationHistory = ({ donations, categories }) => {
                         />
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Pick Up Button */}
+                {item.status === 'Reserved' && (
+                  <div className="flex justify-end mt-4">
+                    <button
+                      onClick={() => onPickup?.(item.id)}
+                      className="button-base bg-sky-500 hover:bg-sky-600"
+                    >
+                      Collected
+                    </button>
                   </div>
                 )}
               </div>
