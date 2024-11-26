@@ -16,7 +16,7 @@ function OrganizationHome() {
     const [isModalOpen, setModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [itemsPerPage] = useState(12);
+    const [itemsPerPage] = useState(9);
     const [receivedDonations] = useState([
         // Sample data - replace with actual API data
         {
@@ -62,7 +62,7 @@ function OrganizationHome() {
         fetchCategories();
     }, []);
 
-    const fetchItems = async (page = 1, perPage = 12, radius = "", category = "") => {
+    const fetchItems = async (page = 1, perPage = 9, radius = "", category = "") => {
         try {
             const params = {
                 page,
@@ -84,7 +84,7 @@ function OrganizationHome() {
                 volume: item.volume?.value,
                 volumeUnit: item.volume?.unit,
                 pickupLocation: `SRID=4326;POINT (${item.pickup_location?.longitude} ${item.pickup_location?.latitude})`,
-                postedBy: item.posted_by?.id,
+                postedBy: item.posted_by?.username,
                 distanceKm: item?.distance_km,
                 bestBefore: item?.best_before
             }));
@@ -350,9 +350,10 @@ function OrganizationHome() {
                                     <div>
                                         <h4 className="text-sm font-medium text-gray-900">Details</h4>
                                         <div className="mt-2 text-sm text-gray-500 space-y-1">
+                                            <p>Posted By: {selectedItem.postedBy}</p>
+                                            <p>Distance: {selectedItem.distanceKm} Km</p>
                                             <p>Weight: {selectedItem.weight} {selectedItem.weightUnit}</p>
                                             <p>Volume: {selectedItem.volume} {selectedItem.volumeUnit}</p>
-                                            <p>Distance: {selectedItem.distanceKm} Km</p>
                                             <p>Best Before: {new Date(selectedItem.bestBefore).toLocaleDateString()}</p>
                                         </div>
                                     </div>
