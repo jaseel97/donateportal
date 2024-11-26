@@ -14,7 +14,6 @@ const DonationForm = ({ onSubmit }) => {
     categoryID: '',
     about: '',
     images: [],
-    pickupDate: '',
     weight: '',
     volume: '',
     bestBefore: '',
@@ -77,7 +76,7 @@ const DonationForm = ({ onSubmit }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const requiredFields = ['categoryID', 'about', 'pickupDate', 'bestBefore', 'availableTill', 'pickupLocation'];
+    const requiredFields = ['categoryID', 'about', 'bestBefore', 'availableTill', 'pickupLocation'];
     const missingFields = requiredFields.filter(field => !formData[field]);
     
     if (missingFields.length > 0) {
@@ -123,7 +122,6 @@ const DonationForm = ({ onSubmit }) => {
       category: '',
       about: '',
       images: [],
-      pickupDate: '',
       weight: '',
       volume: '',
       bestBefore: '',
