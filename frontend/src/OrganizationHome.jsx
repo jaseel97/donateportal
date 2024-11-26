@@ -53,6 +53,15 @@ function OrganizationHome() {
         { label: "50 km", value: 50 },
     ];
 
+    const formatReadableDate = (isoDateString) => {
+        if (!isoDateString) return ""; // Handle null or undefined
+        return new Date(isoDateString).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+        });
+    };
+
     useEffect(() => {
         const fetchCategories = async () => {
             try {
@@ -77,11 +86,11 @@ function OrganizationHome() {
                 ...(category && { category }),
             };
 
-            const response = await axios.get(`${apiDomain}/listings`, {
+            const response = await axios.get(`${apiDomain}/organization/browse`, {
                 params,
                 withCredentials: true
             });
-            
+
             const mappedItems = response.data.items.map(item => ({
                 id: item.id,
                 category: item.category?.id,
@@ -92,10 +101,13 @@ function OrganizationHome() {
                 volumeUnit: item.volume?.unit,
                 pickupLocation: `SRID=4326;POINT (${item.pickup_location?.longitude} ${item.pickup_location?.latitude})`,
                 postedBy: item.posted_by?.username,
+                pickupStart: item?.pickup_window_start,
+                pickupEnd: item?.pickup_window_end,
+                availableTill: formatReadableDate(item?.available_till),
                 distanceKm: item?.distance_km,
-                bestBefore: item?.best_before
+                bestBefore:formatReadableDate(item?.best_before)
             }));
-            
+
             setItems(mappedItems);
             setTotalPages(response.data.total_pages);
         } catch (error) {
@@ -153,7 +165,7 @@ function OrganizationHome() {
 
             setReceivedDonations(prev => [newDonation, ...prev]);
             closeModal();
-            
+
             // Show success message
             alert('Item reserved successfully!');
         } catch (error) {
@@ -207,19 +219,6 @@ function OrganizationHome() {
                                     />
                                 </div>
 
-                                {/* Date Filter */}
-                                <div className="flex flex-col">
-                                    <label className="categorylabel">
-                                        Filter by Best Before:
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={pickupDate}
-                                        onChange={(e) => setPickupDate(e.target.value)}
-                                        className="textareastyle"
-                                    />
-                                </div>
-
                                 {/* Proximity Filter */}
                                 <div className="flex flex-col">
                                     <label className="categorylabel">
@@ -255,13 +254,13 @@ function OrganizationHome() {
                                             <strong>Category:</strong> {categories[item.category] || "Unknown"}
                                         </p>
                                         <p className="text-sm text-gray-600">
-                                            <strong>Weight:</strong> {item.weight} {item.weightUnit}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            <strong>Volume:</strong> {item.volume} {item.volumeUnit}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
                                             <strong>Distance:</strong> {item.distanceKm} Km
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                            <strong>Pickup Window:</strong> {item.pickupStart} - {item.pickupEnd}
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                            <strong>Available Till:</strong> {item.availableTill}
                                         </p>
                                     </div>
                                 ))}
@@ -272,8 +271,8 @@ function OrganizationHome() {
                                 <button
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
-                                    className={`button-base ${currentPage === 1 
-                                        ? 'bg-gray-300 cursor-not-allowed' 
+                                    className={`button-base ${currentPage === 1
+                                        ? 'bg-gray-300 cursor-not-allowed'
                                         : 'bg-sky-500 hover:bg-sky-600'}`}
                                 >
                                     Previous
@@ -284,8 +283,8 @@ function OrganizationHome() {
                                 <button
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages}
-                                    className={`button-base ${currentPage === totalPages 
-                                        ? 'bg-gray-300 cursor-not-allowed' 
+                                    className={`button-base ${currentPage === totalPages
+                                        ? 'bg-gray-300 cursor-not-allowed'
                                         : 'bg-sky-500 hover:bg-sky-600'}`}
                                 >
                                     Next
@@ -296,8 +295,8 @@ function OrganizationHome() {
 
                     {/* History Section */}
                     <div className="w-full lg:w-96 animate-slideInRight hover:scale-[1.02] transition-transform duration-300">
-                        <OrganisationHistory 
-                            donations={receivedDonations} 
+                        <OrganisationHistory
+                            donations={receivedDonations}
                             categories={categoryList}
                         />
                     </div>
@@ -305,7 +304,7 @@ function OrganizationHome() {
 
                 {/* Modal */}
                 {isModalOpen && selectedItem && (
-                    <Modal 
+                    <Modal
                         isOpen={isModalOpen}
                         onClose={closeModal}
                         selectedItem={selectedItem}
@@ -313,10 +312,10 @@ function OrganizationHome() {
                         onReserve={handleReserve}
                     />
                 )}
-<footer className="mt-12 text-center text-sky-600 text-sm animate-slideUp">
-    <p>Together we can make a difference.</p>
-</footer>
-</div>
+                <footer className="mt-12 text-center text-sky-600 text-sm animate-slideUp">
+                    <p>Together we can make a difference.</p>
+                </footer>
+            </div>
         </div>
     );
 }

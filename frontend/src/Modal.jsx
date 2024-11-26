@@ -73,9 +73,11 @@ const Modal = ({
                                 <div className="mt-2 text-sm text-gray-500 space-y-1">
                                     <p>Posted By: {selectedItem.postedBy}</p>
                                     <p>Distance: {selectedItem.distanceKm} Km</p>
+                                    <p>Pickup Window: {selectedItem.pickupStart} - {selectedItem.pickupEnd}</p>
+                                    <p>Available Till: {selectedItem.availableTill}</p>
                                     <p>Weight: {selectedItem.weight} {selectedItem.weightUnit}</p>
                                     <p>Volume: {selectedItem.volume} {selectedItem.volumeUnit}</p>
-                                    <p>Best Before: {new Date(selectedItem.bestBefore).toLocaleDateString()}</p>
+                                    <p>Best Before: {selectedItem.bestBefore}</p>
                                 </div>
                             </div>
 

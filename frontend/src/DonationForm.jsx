@@ -97,7 +97,7 @@ const DonationForm = ({ onSubmit }) => {
     };
 
     try {
-      const response = await axios.post("http://localhost:8080/samaritan/donate", postData, {
+      const response = await axios.post(`${apiDomain}/samaritan/donate`, postData, {
         headers: {
           "Content-Type": "application/json"
         },
