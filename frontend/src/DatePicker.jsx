@@ -1,18 +1,19 @@
 import React from 'react';
 
-const DatePicker = ({ value, onChange, name = "availableTill" }) => {
-  // Parse the value string if it exists
-  const [date, timeFrom, timeTo] = value ? value.split(' ') : ['', '', ''];
+const DatePicker = ({ value, onChange, name = "pickupDate" }) => {
+  // Parse the value string if it exists, otherwise use default times
+  const [date, timeFrom, timeTo] = value ? value.split(' ') : ['', '09:00', '17:00'];
 
   const handleDateChange = (e) => {
     const newDate = e.target.value;
-    const combinedValue = `${newDate} ${timeFrom || ''} ${timeTo || ''}`;
+    // Include default times if they haven't been set yet
+    const combinedValue = `${newDate} ${timeFrom || '09:00'} ${timeTo || '17:00'}`;
     onChange({ target: { name, value: combinedValue } });
   };
 
   const handleTimeFromChange = (e) => {
     const newTimeFrom = e.target.value;
-    const combinedValue = `${date || ''} ${newTimeFrom} ${timeTo || ''}`;
+    const combinedValue = `${date || ''} ${newTimeFrom} ${timeTo || '17:00'}`;
     onChange({ target: { name, value: combinedValue } });
   };
 
@@ -22,7 +23,7 @@ const DatePicker = ({ value, onChange, name = "availableTill" }) => {
       alert("End time cannot be earlier than start time");
       return;
     }
-    const combinedValue = `${date || ''} ${timeFrom || ''} ${newTimeTo}`;
+    const combinedValue = `${date || ''} ${timeFrom || '09:00'} ${newTimeTo}`;
     onChange({ target: { name, value: combinedValue } });
   };
 
@@ -45,7 +46,7 @@ const DatePicker = ({ value, onChange, name = "availableTill" }) => {
         <input
           type="time"
           id={`${name}-time-from`}
-          value={timeFrom}
+          value={timeFrom || '09:00'}
           onChange={handleTimeFromChange}
           className={inputStyle}
           required
@@ -54,7 +55,7 @@ const DatePicker = ({ value, onChange, name = "availableTill" }) => {
         <input
           type="time"
           id={`${name}-time-to`}
-          value={timeTo}
+          value={timeTo || '17:00'}
           onChange={handleTimeToChange}
           className={inputStyle}
           required
