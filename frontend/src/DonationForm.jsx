@@ -91,6 +91,51 @@ const DonationForm = ({ onSubmit }) => {
                 required
               />
             </div>
+            <div className="mb-6">
+              <label htmlFor="pickup-location" className="block text-sm font-medium text-gray-700 mb-2">
+              Pickup Location
+              </label>
+              <textarea
+                id="pickup-location"
+                name="Pickup-Location"
+                rows={3}
+                value={formData.about}
+                onChange={handleInputChange}
+                className="textareastyle resize-none h-16"
+                placeholder="Provide the Pickup Location"
+                required
+              />
+            </div>
+            <div className='flex gap-4'>
+            <div className="mb-6">
+              <label htmlFor="weight" className="block text-sm font-medium text-gray-700 mb-2">
+              Weight
+              </label>
+              <textarea
+                id="weight"
+                name="weight"
+                rows={3}
+                value={formData.about}
+                onChange={handleInputChange}
+                className="textareastyle resize-none h-16"
+                placeholder="Weight"
+              />
+            </div>
+            <div className="mb-6">
+              <label htmlFor="volume" className="block text-sm font-medium text-gray-700 mb-2">
+              Volume
+              </label>
+              <textarea
+                id="volume"
+                name="volume"
+                rows={3}
+                value={formData.about}
+                onChange={handleInputChange}
+                className="textareastyle resize-none h-16"
+                placeholder="Volume"
+              />
+            </div>
+            </div>
             <UploadImage 
               images={formData.images}
               onChange={handleImageChange}
