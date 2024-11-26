@@ -49,7 +49,6 @@ const Modal = ({ isOpen, onClose, children }) => {
 const DonationHistory = ({ donations, categories }) => {
   const [selectedItem, setSelectedItem] = React.useState(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  console.log(donations)
 
   const openItemDetails = (item) => {
     setSelectedItem(item);
