@@ -17,18 +17,25 @@ const Category = ({ value, onChange, categories }) => {
 
   return (
     <div className="mb-6">
-      <label className="categorylabel">Category</label>
+      <label className="categorylabel">
+        Category
+      </label>
       <div className="relative" ref={dropdownRef}>
         <button
           type="button"
           className="categorystyle"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <span className="block truncate">
-            {value || "Select a category"}
-          </span>
+          <div className="flex items-center">
+            <span className="block truncate min-w-[200px]">
+              {value || "Select a category"}
+            </span>
+          </div>
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-            <ChevronUpDownIcon className={`category-icon ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronUpDownIcon 
+              className={`category-icon ${isOpen ? 'rotate-180' : ''}`}
+              aria-hidden="true"
+            />
           </span>
         </button>
 
@@ -37,20 +44,26 @@ const Category = ({ value, onChange, categories }) => {
             {Object.entries(categories.options).map(([key, categoryValue]) => (
               <li
                 key={key}
-                className={`categoryitem ${value === categoryValue ? 'categoryitem-selected' : ''}`}
+                className={`categoryitem ${
+                  value === categoryValue ? 'categoryitem-selected' : ''
+                }`}
                 onClick={() => {
                   onChange({ target: { name: 'category', value: categoryValue } });
                   setIsOpen(false);
                 }}
               >
-                <span className={`categoryitem-text ${value === categoryValue ? 'categoryitem-text-selected' : ''}`}>
-                  {categoryValue}
-                </span>
-                {value === categoryValue && (
-                  <span className="category-checkicon">
-                    <CheckIcon className="checkicon" />
+                <div className="flex items-center">
+                  <span className={`categoryitem-text ${
+                    value === categoryValue ? 'categoryitem-text-selected' : ''
+                  }`}>
+                    {categoryValue}
                   </span>
-                )}
+                  {value === categoryValue && (
+                    <span className="category-checkicon">
+                      <CheckIcon className="checkicon" />
+                    </span>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
