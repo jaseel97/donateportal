@@ -107,18 +107,18 @@ const DonationCard = React.memo(({ item, onClick, formatDate }) => {
   );
 });
 
-const DonationHistory = ({ refreshTrigger }) => {
+const DonationHistory = ({ refreshTrigger, username }) => {
   const [donations, setDonations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 1000;
 
   const fetchDonations = useCallback(async (page) => {
     setIsLoading(true);
     try {
-      const response = await axios.get(`${apiDomain}/samaritan/Tango/items`, {
+      const response = await axios.get(`${apiDomain}/samaritan/${username}/items`, {
         params: {
           page,
           items_per_page: itemsPerPage,
@@ -161,62 +161,6 @@ const DonationHistory = ({ refreshTrigger }) => {
     setIsModalOpen(false);
     setSelectedItem(null);
   }, []);
-
-  // Add these styles for animations
-  const styleTag = (
-    <style>
-      {`
-        @keyframes cardClick {
-          0% { transform: scale(1); }
-          50% { transform: scale(0.95); }
-          100% { transform: scale(1); }
-        }
-
-        @keyframes cardGlow {
-          0% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
-          50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
-          100% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
-        }
-
-        @keyframes cardSlide {
-          0% { transform: translateX(0); }
-          50% { transform: translateX(-5px); }
-          100% { transform: translateX(0); }
-        }
-
-        .card-click-animation {
-          animation: cardClick 0.3s ease-in-out;
-        }
-
-        .card-glow-animation {
-          animation: cardGlow 0.5s ease-in-out;
-        }
-
-        .card-slide-animation {
-          animation: cardSlide 0.3s ease-in-out;
-        }
-
-        .donation-card {
-          transition: all 0.3s ease;
-        }
-
-        .donation-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        .donation-card:active {
-          transform: scale(0.98);
-        }
-      `}
-    </style>
-  );
-
-  const getRandomAnimation = (id) => {
-    if (id !== clickedId) return '';
-    const animations = ['card-click-animation', 'card-glow-animation', 'card-slide-animation'];
-    return animations[Math.floor(Math.random() * animations.length)];
-  };
 
   return (
     <div className="bg-white/90 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">

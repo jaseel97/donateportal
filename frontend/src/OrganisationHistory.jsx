@@ -15,8 +15,8 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
-  const [activeFilter, setActiveFilter] = useState('reserved'); // Default to 'reserved'
+const OrganisationHistory = ({ categories = {}, refreshTrigger, username }) => {
+  const [activeFilter, setActiveFilter] = useState('reserved');
 
   const [donations, setDonations] = useState({
     reserved_items: { items: [], total_pages: 1, total_items: 0 },
@@ -48,11 +48,19 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
 
   const fetchDonations = async () => {
     try {
-      const interactedItems = await axios.get(`${apiDomain}/organization/TangoDjango/items`, {
+      if (!username) {
+        console.error('Username is required to fetch donations');
+        return;
+      }
+      
+      const interactedItems = await axios.get(`${apiDomain}/organization/${username}/items`, {
         headers: {
           "Content-Type": "application/json"
         },
         withCredentials: true,
+        params: {
+          items_per_page: 1000,
+        },
       });
 
       setDonations({
@@ -66,7 +74,7 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
 
   useEffect(() => {
     fetchDonations();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, username]);
 
   const filteredDonations = activeFilter === 'reserved' 
     ? donations.reserved_items.items 
@@ -140,7 +148,7 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
         )}
       </div>
 
-      {/* History Cards Section - This is the only scrollable part */}
+      {/* History Cards Section */}
       <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 240px)' }}>
         {filteredDonations.length === 0 ? (
           <p className="text-gray-500 text-center py-8">No donations received yet</p>
@@ -154,13 +162,11 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
                          transition-all duration-300 relative"
             >
               <div className="space-y-2">
-                {/* Description Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Item:</span>
                   <span className="text-sm text-gray-600">{item.description || 'No description available'}</span>
                 </div>
 
-                {/* Category Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Category:</span>
                   <span className="text-sm text-gray-600">
@@ -168,19 +174,16 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
                   </span>
                 </div>
 
-                {/* Status Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Status:</span>
                   <StatusBadge status={item.is_picked_up ? 'Picked Up' : 'Reserved'} />
                 </div>
 
-                {/* Date Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Date:</span>
                   <span className="text-sm text-gray-600">{formatDate(item.available_till)}</span>
                 </div>
 
-                {/* Best Before Line (if available) */}
                 {item.best_before && (
                   <div className="flex items-center">
                     <span className="text-sm font-medium text-gray-700 w-24">Best Before:</span>
@@ -188,7 +191,6 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
                   </div>
                 )}
 
-                {/* Pick Up Button */}
                 {item.is_reserved && !item.is_picked_up && (
                   <div className="flex justify-end mt-4">
                     <button

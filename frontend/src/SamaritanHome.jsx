@@ -48,7 +48,9 @@ const SamaritanHome = () => {
           </div>
 
           <div className="w-full lg:w-96 animate-slideInRight hover:scale-[1.02] transition-transform duration-300">
-            <DonationHistory refreshTrigger={refreshTrigger} />
+            <DonationHistory 
+            refreshTrigger={refreshTrigger}
+            username={username} />
           </div>
         </div>
 
@@ -57,7 +59,6 @@ const SamaritanHome = () => {
         </footer>
       </div>
     </div>
-
   );
 };
 
