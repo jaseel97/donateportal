@@ -27,6 +27,7 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [pickupStatus, setPickupStatus] = useState(null);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('en-US', {
@@ -79,6 +80,22 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
     }
   };
 
+  const handlePickup = async (itemId) => {
+    try {
+      await axios.post(`${apiDomain}/item/${itemId}/pickup`, {}, {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        withCredentials: true,
+      });
+      setPickupStatus('Item has been picked up!');
+      fetchDonations();
+    } catch (error) {
+      console.error('Error marking item as picked up:', error);
+      setPickupStatus('Error occurred while picking up the item.');
+    }
+  };
+
   return (
     <div className="w-full bg-white p-6 rounded-lg shadow-sm">
       <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">History</h2>
@@ -112,6 +129,12 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
           <span className="text-sm text-gray-600">Picked Up</span>
         </label>
       </div>
+
+      {pickupStatus && (
+        <div className="text-center text-green-600 mb-4">
+          {pickupStatus}
+        </div>
+      )}
 
       <div className="space-y-6">
         {filteredDonations.length === 0 ? (
@@ -164,10 +187,10 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
                 {item.is_reserved && !item.is_picked_up && (
                   <div className="flex justify-end mt-4">
                     <button
-                      onClick={() => onPickup?.(item.id)}
+                      onClick={() => handlePickup(item.id)}
                       className="button-base bg-sky-500 hover:bg-sky-600"
                     >
-                      Collected
+                      Mark As Collected
                     </button>
                   </div>
                 )}

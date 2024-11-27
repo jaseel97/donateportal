@@ -39,14 +39,6 @@ function OrganizationHome() {
         },
     ]);
 
-    const proximityOptions = [
-        { label: "All", value: "" },
-        { label: "5 km", value: 5 },
-        { label: "10 km", value: 10 },
-        { label: "20 km", value: 20 },
-        { label: "50 km", value: 50 },
-    ];
-
     const formatReadableDate = (isoDateString) => {
         if (!isoDateString) return ""; 
         return new Date(isoDateString).toLocaleDateString("en-US", {
