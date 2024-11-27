@@ -227,19 +227,22 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
           />
         </div>
 
+        {/* Form Actions */}
         <div className="flex justify-end gap-4 pt-6">
           <button
             type="button"
             onClick={handleReset}
-            className="resetbutton"
+            className="px-8 py-3 rounded-2xl text-white bg-red-600 hover:bg-red-700 
+                     focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
           >
-            Clear Form
+            Reset
           </button>
           <button
             type="submit"
-            className="submitbutton"
+            className="px-8 py-3 rounded-2xl text-white bg-green-600 hover:bg-green-700
+                     focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
           >
-            Confirm Donation
+            Submit Donation
           </button>
         </div>
       </form>

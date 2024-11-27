@@ -5,14 +5,16 @@ import OrganisationHistory from './OrganisationHistory';
 import Modal from './Modal';
 import Category from './Category';
 import ProximityDropdown from './ProximityDropdown';
+import { useLocation } from 'react-router-dom';
 
 function OrganizationHome() {
+    const organizationLocation = { lat: 42.3173, lon: -82.5039 };
+
     const [filter, setFilter] = useState("");
     const [search, setSearch] = useState("");
     const [pickupDate, setPickupDate] = useState("");
     const [proximityFilter, setProximityFilter] = useState("");
-    const [categories, setCategories] = useState({});
-    const [items, setItems] = useState([]);
+    const [categories, setCategories] = useState({}); // Store fetched categories
     const [selectedItem, setSelectedItem] = useState(null);
     const [isModalOpen, setModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -40,6 +42,10 @@ function OrganizationHome() {
             images: []
         },
     ]);
+    const location = useLocation();
+    const { username } = location.state || {}; 
+
+    console.log("User name from Organization Home Page:", username);
 
     const handlePickupSuccess = () => {
         setPickupStatus('Item has been picked up!');
@@ -128,12 +134,23 @@ function OrganizationHome() {
     };
 
     const filteredItems = items.filter((item) => {
+        const matchesCategory = filter ? item.category.toString() === filter : true;
         const matchesSearch = item.description.toLowerCase().includes(search.toLowerCase());
         const matchesDate = pickupDate
-            ? new Date(item.bestBefore).toISOString().split("T")[0] === pickupDate
+            ? new Date(item.pickupTime).toISOString().split("T")[0] === pickupDate
             : true;
 
-        return matchesSearch && matchesDate;
+        const [_, pickupLon, pickupLat] = item.pickupLocation.match(/POINT \((-?\d+.\d+) (-?\d+.\d+)\)/);
+        const distance = calculateDistance(
+            organizationLocation.lat,
+            organizationLocation.lon,
+            parseFloat(pickupLat),
+            parseFloat(pickupLon)
+        );
+
+        const matchesProximity = proximityFilter ? distance <= proximityFilter : true;
+
+        return matchesCategory && matchesSearch && matchesDate && matchesProximity;
     });
 
     const openModal = (item) => {

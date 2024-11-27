@@ -1,7 +1,7 @@
 import React from 'react';
 
 const ProgressBar = ({ currentStep }) => {
-  const steps = ['Donation Offered', 'Reserved', 'Picked Up'];
+  const steps = ['Donation placed', 'Reserved', 'Picked Up'];
   const currentStepIndex = steps.indexOf(currentStep);
 
   return (

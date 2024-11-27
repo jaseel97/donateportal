@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import DonationForm from './DonationForm';
 import DonationHistory from './DonationHistory';
+import { useLocation } from 'react-router-dom';
 
 const SamaritanHome = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [donationSuccess, setDonationSuccess] = useState(false);
+  const location = useLocation();
+  const { username } = location.state || {};
 
   const handleSubmit = (data) => {
     console.log('Donation submitted:', data);
@@ -54,6 +57,7 @@ const SamaritanHome = () => {
         </footer>
       </div>
     </div>
+
   );
 };
 
