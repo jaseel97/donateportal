@@ -9,6 +9,7 @@
     hover:scale-[1.01] hover:shadow-md focus:border-sky-500 
     transition-all duration-300 rounded-t-lg;
 }
+
 /* Input styles */
 .textareastyle {
     @apply base-input-style;
@@ -79,4 +80,20 @@
     hover:text-sky-500 transition-colors duration-200
     focus-within:outline-none focus-within:ring-2 
     focus-within:ring-sky-500 focus-within:ring-offset-2;
+}
+
+/* Custom animation for fadeIn */
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 1s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
 }

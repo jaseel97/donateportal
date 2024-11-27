@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import DonationForm from './DonationForm';
 import DonationHistory from './DonationHistory';
+import { useLocation } from 'react-router-dom';
 
 export default function SamaritanHome() {
   const [donations, setDonations] = useState([]);
-  
+  const location = useLocation();
+  const { username } = location.state || {}; // Get username from state
+
+  console.log("User name from Samaritan Home Page:", username);
+
   const categories = [
     { id: 'clothes', name: 'Clothes' },
     { id: 'food', name: 'Food' },
@@ -26,5 +31,6 @@ export default function SamaritanHome() {
       <DonationForm onSubmit={handleDonationSubmit} />
       <DonationHistory donations={donations} categories={categories} />
     </div>
+
   );
 }

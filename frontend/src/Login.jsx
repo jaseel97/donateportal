@@ -28,7 +28,7 @@ const Login = () => {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                credentials: "include", 
+                credentials: "include",
                 body: JSON.stringify({ username, password }),
             });
 
@@ -44,10 +44,10 @@ const Login = () => {
                         acc[key] = value;
                         return acc;
                     }, {});
-                    
+
                     const jwtToken = cookies.jwt;
                     console.log("JWT Token:", jwtToken);
-                    
+
                     if (jwtToken) {
                         // Decode JWT to get user_type (if needed)
                         const payload = JSON.parse(atob(jwtToken.split(".")[1]));
@@ -74,19 +74,23 @@ const Login = () => {
         }
     };
 
+
     useEffect(() => {
         if (userType) {
+            const stateData = { username: formData.username };  // Send the username in state
+
             if (userType === "samaritan") {
                 console.log("Navigating to /samaritan...");
-                navigate("/samaritan");
+                navigate("/samaritan", { state: stateData });
             } else if (userType === "organization") {
                 console.log("Navigating to /organization...");
-                navigate("/organization");
+                navigate("/organization", { state: stateData });
             } else {
                 setMessage("Unknown user type.");
             }
         }
-    }, [userType, navigate]);  // Trigger navigation when userType is updated
+    }, [userType, navigate, formData.username]);  // Trigger navigation when userType is updated
+
 
     const handleFlip = () => {
         setIsFlipped((prevState) => !prevState);
@@ -105,9 +109,8 @@ const Login = () => {
 
             {/* Right Section with Login and Flip Animation */}
             <div
-                className={`relative w-5/12 bg-white shadow-xl transition-transform duration-500 transform ${
-                    isFlipped ? "rotate-y-180" : ""
-                }`}
+                className={`relative w-5/12 bg-white shadow-xl transition-transform duration-500 transform ${isFlipped ? "rotate-y-180" : ""
+                    }`}
                 style={{
                     perspective: "1000px",
                     transformStyle: "preserve-3d",
@@ -115,9 +118,8 @@ const Login = () => {
             >
                 {/* Front Side: Login Form */}
                 <div
-                    className={`absolute w-full h-full backface-hidden ${
-                        isFlipped ? "hidden" : "flex"
-                    } flex-col items-center justify-center p-8`}
+                    className={`absolute w-full h-full backface-hidden ${isFlipped ? "hidden" : "flex"
+                        } flex-col items-center justify-center p-8`}
                 >
                     <h1 className="text-3xl font-extrabold text-blue-600 mb-6 text-center">
                         Samaritan Connect
@@ -171,11 +173,10 @@ const Login = () => {
                     </form>
                     {message && (
                         <p
-                            className={`mt-4 text-center ${
-                                message.includes("successful")
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                            } font-semibold`}
+                            className={`mt-4 text-center ${message.includes("successful")
+                                ? "text-green-600"
+                                : "text-red-600"
+                                } font-semibold`}
                         >
                             {message}
                         </p>
@@ -205,9 +206,8 @@ const Login = () => {
 
                 {/* Back Side: About App */}
                 <div
-                    className={`absolute w-full h-full backface-hidden rotate-y-180 ${
-                        isFlipped ? "flex" : "hidden"
-                    } flex-col items-center justify-center p-8`}
+                    className={`absolute w-full h-full backface-hidden rotate-y-180 ${isFlipped ? "flex" : "hidden"
+                        } flex-col items-center justify-center p-8`}
                 >
                     <h1 className="text-3xl font-extrabold text-blue-600 mb-6 text-center">
                         About Samaritan Connect

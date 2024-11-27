@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useLocation } from 'react-router-dom';
 
 const items = [
     {
@@ -224,6 +225,10 @@ function OrganizationHome() {
     const [categories, setCategories] = useState({}); // Store fetched categories
     const [selectedItem, setSelectedItem] = useState(null);
     const [isModalOpen, setModalOpen] = useState(false);
+    const location = useLocation();
+    const { username } = location.state || {}; // Get username from state
+
+    console.log("User name from Organization Home Page:", username);
 
     useEffect(() => {
         const fetchCategories = async () => {
