@@ -7,6 +7,7 @@ import Category from './Category';
 import ProximityDropdown from './ProximityDropdown';
 import { useLocation } from 'react-router-dom';
 import UsernameAva from "./UsernameAva";
+import { MapPinIcon } from "@heroicons/react/24/solid";
 
 function OrganizationHome() {
     const [filter, setFilter] = useState("");
@@ -106,6 +107,16 @@ function OrganizationHome() {
         }
     };
 
+    const handleDirectionsClick = (e, item) => {
+        e.stopPropagation(); // Prevent the card's onClick from triggering
+        // Extract coordinates from the POINT string
+        const coordinatesMatch = item.pickupLocation.match(/POINT \((.*?) (.*?)\)/);
+        if (coordinatesMatch) {
+            const [_, longitude, latitude] = coordinatesMatch;
+            window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
+        }
+    };
+
     useEffect(() => {
         fetchCategories();
     }, []);
@@ -199,11 +210,20 @@ function OrganizationHome() {
                                     <div
                                         key={item.id}
                                         onClick={() => openModal(item)}
-                                        className="border-2 border-indigo-200 rounded-lg p-4 bg-white/85 
+                                        className="relative border-2 border-indigo-200 rounded-lg p-4 bg-white/85 
                                                  hover:bg-gradient-to-r hover:from-white/90 hover:to-indigo-50/90 
                                                  hover:border-indigo-300 hover:scale-[1.01] hover:shadow-md 
                                                  transition-all duration-300 cursor-pointer"
                                     >
+                                        <div className="absolute top-4 right-4">
+                                            <button
+                                                onClick={(e) => handleDirectionsClick(e, item)}
+                                                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                                            >
+                                                <MapPinIcon className="h-5 w-5 text-sky-600 hover:text-sky-800 transform hover:scale-110 transition-all duration-300 hover:drop-shadow-md cursor-pointer" />
+
+                                            </button>
+                                        </div>
                                         <h3 className="font-bold text-lg text-sky-800 mb-2">{item.description}</h3>
                                         <p className="text-sm text-gray-600">
                                             <strong>Category:</strong> {categories.options?.[item.category] || "Unknown"}
