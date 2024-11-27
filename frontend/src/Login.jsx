@@ -188,12 +188,6 @@ const Login = () => {
                         >
                             Don't have an account? Register here
                         </Link>
-                        <a
-                            href="/forgot-password"
-                            className="text-blue-600 hover:underline text-sm font-medium"
-                        >
-                            Forgot Password?
-                        </a>
                     </div>
                     <button
                         onClick={handleFlip}
