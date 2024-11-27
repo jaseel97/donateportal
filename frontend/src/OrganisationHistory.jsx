@@ -16,10 +16,7 @@ const StatusBadge = ({ status }) => {
 };
 
 const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
-  const [filters, setFilters] = useState({
-    picked: false,
-    reserved: true
-  });
+  const [activeFilter, setActiveFilter] = useState('reserved'); // Default to 'reserved'
 
   const [donations, setDonations] = useState({
     reserved_items: { items: [], total_pages: 1, total_items: 0 },
@@ -71,16 +68,12 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
     fetchDonations();
   }, [refreshTrigger]);
 
-  const filteredDonations = [
-    ...donations.reserved_items.items.filter(item => filters.reserved),
-    ...donations.picked_up_items.items.filter(item => filters.picked)
-  ];
+  const filteredDonations = activeFilter === 'reserved' 
+    ? donations.reserved_items.items 
+    : donations.picked_up_items.items;
 
   const handleFilterChange = (filterName) => {
-    setFilters(prev => ({
-      ...prev,
-      [filterName]: !prev[filterName]
-    }));
+    setActiveFilter(filterName);
   };
 
   const handlePickup = async (itemId) => {
@@ -113,7 +106,7 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={filters.reserved}
+              checked={activeFilter === 'reserved'}
               onChange={() => handleFilterChange('reserved')}
               className="form-checkbox h-4 w-4 text-sky-500 rounded border-2 border-indigo-200 
                          focus:ring-sky-500 focus:ring-2 focus:ring-offset-2 
@@ -125,7 +118,7 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={filters.picked}
+              checked={activeFilter === 'picked'}
               onChange={() => handleFilterChange('picked')}
               className="form-checkbox h-4 w-4 text-sky-500 rounded border-2 border-indigo-200 
                          focus:ring-sky-500 focus:ring-2 focus:ring-offset-2 
