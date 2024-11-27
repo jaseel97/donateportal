@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import illustration from "./assets/login.jpg";
 import { apiDomain } from "./Config";
@@ -6,7 +6,8 @@ import { apiDomain } from "./Config";
 const Login = () => {
     const [formData, setFormData] = useState({ username: "", password: "" });
     const [message, setMessage] = useState("");
-    const [isFlipped, setIsFlipped] = useState(false); 
+    const [isFlipped, setIsFlipped] = useState(false);
+    const [userType, setUserType] = useState(null);
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -27,7 +28,7 @@ const Login = () => {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                credentials: 'include',
+                credentials: "include",
                 body: JSON.stringify({ username, password }),
             });
 
@@ -37,11 +38,27 @@ const Login = () => {
                 if (data.message === "Login successful") {
                     setMessage("Login successful!");
 
-                    const jwt = response.headers.get("Set-Cookie");
-                    if (data.user_type === "samaritan") {
-                        navigate("/samaritan");
-                    } else if (data.user_type === "organization") {
-                        navigate("/organization");
+                    const cookies = document.cookie.split("; ").reduce((acc, cookie) => {
+                        const [key, value] = cookie.split("=");
+                        acc[key] = value;
+                        return acc;
+                    }, {});
+
+                    const jwtToken = cookies.jwt;
+                    console.log("JWT Token:", jwtToken);
+
+                    if (jwtToken) {
+                        // Decode JWT to get user_type (if needed)
+                        const payload = JSON.parse(atob(jwtToken.split(".")[1]));
+                        const decodedUserType = payload.user_type;
+                        const userName = payload.username;
+
+                        console.log("User Type from JWT:", decodedUserType);
+                        console.log("User Name:", userName);
+
+                        setUserType(decodedUserType);  // Update userType to trigger navigation
+                    } else {
+                        setMessage("JWT token not found.");
                     }
                 } else {
                     setMessage(data.error || "An error occurred. Please try again.");
@@ -55,6 +72,24 @@ const Login = () => {
             setMessage("Unable to log in. Please try again later.");
         }
     };
+
+
+    useEffect(() => {
+        if (userType) {
+            const stateData = { username: formData.username };  // Send the username in state
+
+            if (userType === "samaritan") {
+                console.log("Navigating to /samaritan...");
+                navigate("/samaritan", { state: stateData });
+            } else if (userType === "organization") {
+                console.log("Navigating to /organization...");
+                navigate("/organization", { state: stateData });
+            } else {
+                setMessage("Unknown user type.");
+            }
+        }
+    }, [userType, navigate, formData.username]); 
+
 
     const handleFlip = () => {
         setIsFlipped((prevState) => !prevState);
@@ -73,9 +108,8 @@ const Login = () => {
 
             {/* Right Section with Login and Flip Animation */}
             <div
-                className={`relative w-5/12 bg-white shadow-xl transition-transform duration-500 transform ${
-                    isFlipped ? "rotate-y-180" : ""
-                }`}
+                className={`relative w-5/12 bg-white shadow-xl transition-transform duration-500 transform ${isFlipped ? "rotate-y-180" : ""
+                    }`}
                 style={{
                     perspective: "1000px",
                     transformStyle: "preserve-3d",
@@ -83,9 +117,8 @@ const Login = () => {
             >
                 {/* Front Side: Login Form */}
                 <div
-                    className={`absolute w-full h-full backface-hidden ${
-                        isFlipped ? "hidden" : "flex"
-                    } flex-col items-center justify-center p-8`}
+                    className={`absolute w-full h-full backface-hidden ${isFlipped ? "hidden" : "flex"
+                        } flex-col items-center justify-center p-8`}
                 >
                     <h1 className="text-3xl font-extrabold text-blue-600 mb-6 text-center">
                         Samaritan Connect
@@ -139,11 +172,10 @@ const Login = () => {
                     </form>
                     {message && (
                         <p
-                            className={`mt-4 text-center ${
-                                message.includes("successful")
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                            } font-semibold`}
+                            className={`mt-4 text-center ${message.includes("successful")
+                                ? "text-green-600"
+                                : "text-red-600"
+                                } font-semibold`}
                         >
                             {message}
                         </p>
@@ -173,9 +205,8 @@ const Login = () => {
 
                 {/* Back Side: About App */}
                 <div
-                    className={`absolute w-full h-full backface-hidden rotate-y-180 ${
-                        isFlipped ? "flex" : "hidden"
-                    } flex-col items-center justify-center p-8`}
+                    className={`absolute w-full h-full backface-hidden rotate-y-180 ${isFlipped ? "flex" : "hidden"
+                        } flex-col items-center justify-center p-8`}
                 >
                     <h1 className="text-3xl font-extrabold text-blue-600 mb-6 text-center">
                         About Samaritan Connect

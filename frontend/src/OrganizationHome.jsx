@@ -5,6 +5,8 @@ import OrganisationHistory from './OrganisationHistory';
 import Modal from './Modal';
 import Category from './Category';
 import ProximityDropdown from './ProximityDropdown';
+import { useLocation } from 'react-router-dom';
+import UsernameAva from "./UsernameAva";
 
 function OrganizationHome() {
     const [filter, setFilter] = useState("");
@@ -18,6 +20,7 @@ function OrganizationHome() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [itemsPerPage] = useState(9);
+    const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
     const [receivedDonations, setReceivedDonations] = useState([
         {
             id: 1,
@@ -38,6 +41,11 @@ function OrganizationHome() {
             images: []
         },
     ]);
+
+    const location = useLocation();
+    const { username } = location.state || {}; 
+
+    console.log("User name from Organization Home Page:", username);
 
     const formatReadableDate = (isoDateString) => {
         if (!isoDateString) return ""; 
@@ -138,21 +146,25 @@ function OrganizationHome() {
     const handleReservationSuccess = () => {
         const selectedCategory = filter === "" ? "" : filter;
         fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
+        setHistoryRefreshTrigger(prev => prev + 1);
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
             <div className="max-w-7xl mx-auto p-6">
-                <h1 className="text-3xl font-bold text-sky-900 text-center mb-8 animate-slideDown">
-                    Organization Portal
-                </h1>
+            <div className="flex justify-center items-center mb-8 relative">
+          <h1 className="text-3xl font-bold text-sky-900 animate-slideDown">
+            Samaritan Portal
+          </h1>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
+            <UsernameAva username={username} />
+          </div>
+        </div>
 
-                <div className="flex flex-col lg:flex-row gap-6 max-w-7xl w-full mx-auto">
-                    <div className="flex-grow animate-slideInLeft">
-                        <div className="bg-white/90 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
-                            {/* Filter Section */}
+                <div className="flex flex-col lg:flex-row gap-6 max-w-7xl w-full mx-auto min-h-[calc(100vh-12rem)]">
+                    <div className="flex-grow animate-slideInLeft h-full">
+                        <div className="bg-white/90 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300 h-full">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                                {/* Category Filter */}
                                 <div className="flex flex-col">
                                     <Category
                                         value={filter ? categories.options?.[filter] : ""}
@@ -160,7 +172,6 @@ function OrganizationHome() {
                                     />
                                 </div>
 
-                                {/* Search Input */}
                                 <div className="flex flex-col">
                                     <label className="categorylabel">
                                         Search by Description:
@@ -174,7 +185,6 @@ function OrganizationHome() {
                                     />
                                 </div>
 
-                                {/* Proximity Filter */}
                                 <div className="flex flex-col">
                                     <ProximityDropdown
                                         value={proximityFilter}
@@ -183,7 +193,6 @@ function OrganizationHome() {
                                 </div>
                             </div>
 
-                            {/* Items Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                                 {filteredItems.map((item) => (
                                     <div
@@ -211,7 +220,6 @@ function OrganizationHome() {
                                 ))}
                             </div>
 
-                            {/* Pagination */}
                             <div className="flex justify-between items-center mt-6">
                                 <button
                                     onClick={() => handlePageChange(currentPage - 1)}
@@ -238,16 +246,16 @@ function OrganizationHome() {
                         </div>
                     </div>
 
-                    {/* History Section */}
-                    <div className="w-full lg:w-96 animate-slideInRight hover:scale-[1.02] transition-transform duration-300">
+                    <div className="w-full lg:w-96 animate-slideInRight hover:scale-[1.02] transition-transform duration-300 h-full">
                         <OrganisationHistory
                             donations={receivedDonations}
                             categories={categories}
+                            refreshTrigger={historyRefreshTrigger}
+                            username={username}
                         />
                     </div>
                 </div>
 
-                {/* Modal */}
                 {isModalOpen && selectedItem && (
                     <Modal
                         isOpen={isModalOpen}

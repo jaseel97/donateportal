@@ -107,47 +107,18 @@ const DonationCard = React.memo(({ item, onClick, formatDate }) => {
   );
 });
 
-const PaginationControls = ({ currentPage, totalPages, onPageChange }) => {
-  return (
-    <div className="flex justify-center mt-4 space-x-2">
-      <button
-        disabled={currentPage === 1}
-        onClick={() => onPageChange(currentPage - 1)}
-        className={`px-4 py-2 border rounded ${
-          currentPage === 1 ? 'bg-gray-200 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-50'
-        }`}
-      >
-        Previous
-      </button>
-      <span className="px-4 py-2 border rounded bg-gray-100">
-        Page {currentPage} of {totalPages}
-      </span>
-      <button
-        disabled={currentPage === totalPages}
-        onClick={() => onPageChange(currentPage + 1)}
-        className={`px-4 py-2 border rounded ${
-          currentPage === totalPages ? 'bg-gray-200 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-50'
-        }`}
-      >
-        Next
-      </button>
-    </div>
-  );
-};
-
-const DonationHistory = () => {
+const DonationHistory = ({ refreshTrigger, username }) => {
   const [donations, setDonations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 1000;
 
   const fetchDonations = useCallback(async (page) => {
     setIsLoading(true);
     try {
-      const response = await axios.get(`${apiDomain}/samaritan/Tango/items`, {
+      const response = await axios.get(`${apiDomain}/samaritan/${username}/items`, {
         params: {
           page,
           items_per_page: itemsPerPage,
@@ -159,7 +130,6 @@ const DonationHistory = () => {
       });
       const { active_items } = response.data;
       setDonations(active_items.items || []);
-      setTotalPages(active_items.total_pages || 1);
     } catch (error) {
       console.error('Error fetching donations:', error);
     } finally {
@@ -169,7 +139,7 @@ const DonationHistory = () => {
 
   useEffect(() => {
     fetchDonations(currentPage);
-  }, [currentPage, fetchDonations]);
+  }, [currentPage, fetchDonations, refreshTrigger]);
 
   const formatDate = useCallback((date) => {
     if (!date) return 'Date not available';
@@ -192,22 +162,20 @@ const DonationHistory = () => {
     setSelectedItem(null);
   }, []);
 
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
   return (
-    <div className="w-full bg-white rounded-lg shadow-sm">
-      <div className="p-4">
+    <div className="bg-white/90 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+      {/* Fixed Header Section */}
+      <div className="p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
           Donation History
         </h2>
-        <p className="text-sm text-center text-gray-500 mb-6">
+        <p className="text-sm text-center text-gray-500 mb-4">
           Check the status of recent donations
         </p>
+      </div>
 
+      {/* Scrollable Content Section */}
+      <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
         {isLoading ? (
           <div className="text-center py-8">
             <p className="text-gray-500">Loading donations...</p>
@@ -220,22 +188,15 @@ const DonationHistory = () => {
             </p>
           </div>
         ) : (
-          <div>
-            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-              {donations.map((item) => (
-                <DonationCard
-                  key={item.id}
-                  item={item}
-                  onClick={() => openItemDetails(item)}
-                  formatDate={formatDate}
-                />
-              ))}
-            </div>
-            <PaginationControls
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
+          <div className="space-y-4">
+            {donations.map((item) => (
+              <DonationCard
+                key={item.id}
+                item={item}
+                onClick={() => openItemDetails(item)}
+                formatDate={formatDate}
+              />
+            ))}
           </div>
         )}
       </div>

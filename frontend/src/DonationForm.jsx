@@ -5,7 +5,7 @@ import Category from './Category';
 import DatePicker from './DatePicker';
 import Calendar from './Calendar';
 
-const DonationForm = ({ onSubmit }) => {
+const DonationForm = ({ onSubmit, onDonationSuccess }) => {
   const [formData, setFormData] = useState({
     category: '',
     categoryID: '',
@@ -65,7 +65,7 @@ const DonationForm = ({ onSubmit }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const requiredFields = ['categoryID', 'about', 'bestBefore', 'availableTill', 'pickupLocation'];
+    const requiredFields = ['categoryID', 'about', 'availableTill', 'pickupLocation'];
     const missingFields = requiredFields.filter(field => !formData[field]);
     
     if (missingFields.length > 0) {
@@ -90,7 +90,7 @@ const DonationForm = ({ onSubmit }) => {
       weight_unit: "kg",
       volume: formData.volume || null,
       volume_unit: "m³",
-      best_before: new Date(formData.bestBefore).toISOString().split('T')[0],
+      best_before: formData.bestBefore ? new Date(formData.bestBefore).toISOString().split('T')[0] : null,
       pickup_window_start: formData.pickupWindowStart,
       pickup_window_end: formData.pickupWindowEnd,
       available_till: convertToISO(formData.availableTill)
@@ -108,6 +108,7 @@ const DonationForm = ({ onSubmit }) => {
       
       console.log("Donation saved successfully:", response.data);
       onSubmit(response.data);
+      onDonationSuccess(); // Call the success callback to refresh history
       handleReset();
     } catch (error) {
       console.error("Error saving donation:", error);
@@ -145,12 +146,12 @@ const DonationForm = ({ onSubmit }) => {
   }, [imagePreview]);
 
   return (
-    <div className="flex-1 w-full bg-white p-6 rounded-lg shadow-sm">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="flex-1 w-full bg-white/90 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Add New Donation</h2>
           
-          <div className="flex gap-6 w-full mx-auto">
+          <div className="flex gap-2 w-full mx-auto">
             <Category
               id={formData.categoryID}
               value={formData.category}
@@ -221,13 +222,12 @@ const DonationForm = ({ onSubmit }) => {
             </div>
             <div className="mb-6">
               <label htmlFor="bestBefore" className="categorylabel">
-                Best Before*
+                Best Before
               </label>
               <Calendar
                 name="bestBefore"
                 value={formData.bestBefore}
                 onChange={handleInputChange}
-                required
               />
             </div>
           </div>

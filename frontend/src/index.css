@@ -9,6 +9,7 @@
     hover:scale-[1.01] hover:shadow-md focus:border-sky-500 
     transition-all duration-300 rounded-t-lg;
 }
+
 /* Input styles */
 .textareastyle {
     @apply base-input-style;
