@@ -1,17 +1,19 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import ProgressBar from './ProgressBar';
+import axios from 'axios';
+import { apiDomain } from './Config';
 
 const StatusBadge = ({ status }) => {
   const statusStyles = {
     'Donation Offered': 'bg-green-100 text-green-800',
     'Reserved': 'bg-red-100 text-red-800',
-    'Picked Up': 'bg-blue-100 text-blue-800'
+    'Picked Up': 'bg-blue-100 text-blue-800',
   };
 
   return (
-    <span 
+    <span
       className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 
         ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}
     >
@@ -35,9 +37,9 @@ const Modal = ({ isOpen, onClose, children }) => {
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
-    <div 
+    <div
       className="fixed inset-0 z-[9999] overflow-y-auto"
-      aria-modal="true" 
+      aria-modal="true"
       role="dialog"
     >
       <div className="flex min-h-screen items-end justify-center p-4 text-center sm:items-center sm:p-0">
@@ -49,7 +51,7 @@ const Modal = ({ isOpen, onClose, children }) => {
 
         <div
           className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           {children}
         </div>
@@ -68,7 +70,7 @@ const DonationCard = React.memo(({ item, onClick, formatDate }) => {
       <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-md overflow-hidden">
         {item.images?.length > 0 ? (
           <img
-            src={URL.createObjectURL(item.images[0])}
+            src={item.images[0]}
             alt=""
             className="w-full h-full object-cover transform transition-transform duration-300 group-hover:scale-110"
           />
@@ -81,38 +83,93 @@ const DonationCard = React.memo(({ item, onClick, formatDate }) => {
 
       <div className="flex-1 min-w-0 pl-3">
         <h3 className="text-sm font-medium text-gray-900 capitalize group-hover:text-blue-600 transition-colors duration-300">
-          {item.item?.category?.name || 'Uncategorized'}
+          {item.category?.name || 'Others'}
         </h3>
         <p className="text-sm text-gray-500 truncate group-hover:text-gray-700 transition-colors duration-300">
-          {item.item?.description || 'No description available'}
+          {item.description || 'No description available'}
         </p>
         <div className="mt-1">
-          <StatusBadge status={item.status || 'Processing'} />
+          <StatusBadge
+            status={
+              item.is_picked_up
+                ? 'Picked Up'
+                : item.is_reserved
+                ? 'Reserved'
+                : 'Donation Offered'
+            }
+          />
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          {formatDate(new Date())}
+          {formatDate(item.available_till)}
         </p>
       </div>
     </div>
   );
 });
 
-const DonationHistory = ({ donations = [], categories = [] }) => {
-  const [selectedItem, setSelectedItem] = React.useState(null);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+const PaginationControls = ({ currentPage, totalPages, onPageChange }) => {
+  return (
+    <div className="flex justify-center mt-4 space-x-2">
+      <button
+        disabled={currentPage === 1}
+        onClick={() => onPageChange(currentPage - 1)}
+        className={`px-4 py-2 border rounded ${
+          currentPage === 1 ? 'bg-gray-200 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-50'
+        }`}
+      >
+        Previous
+      </button>
+      <span className="px-4 py-2 border rounded bg-gray-100">
+        Page {currentPage} of {totalPages}
+      </span>
+      <button
+        disabled={currentPage === totalPages}
+        onClick={() => onPageChange(currentPage + 1)}
+        className={`px-4 py-2 border rounded ${
+          currentPage === totalPages ? 'bg-gray-200 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-50'
+        }`}
+      >
+        Next
+      </button>
+    </div>
+  );
+};
+
+const DonationHistory = () => {
+  const [donations, setDonations] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10;
+
+  const fetchDonations = useCallback(async (page) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${apiDomain}/samaritan/Tango/items`, {
+        params: {
+          page,
+          items_per_page: itemsPerPage,
+        },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        withCredentials: true,
+      });
+      const { active_items } = response.data;
+      setDonations(active_items.items || []);
+      setTotalPages(active_items.total_pages || 1);
+    } catch (error) {
+      console.error('Error fetching donations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    return () => {
-      // Cleanup URLs when component unmounts
-      donations.forEach(donation => {
-        if (donation.images) {
-          donation.images.forEach(image => {
-            URL.revokeObjectURL(URL.createObjectURL(image));
-          });
-        }
-      });
-    };
-  }, [donations]);
+    fetchDonations(currentPage);
+  }, [currentPage, fetchDonations]);
 
   const formatDate = useCallback((date) => {
     if (!date) return 'Date not available';
@@ -121,7 +178,7 @@ const DonationHistory = ({ donations = [], categories = [] }) => {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }, []);
 
@@ -135,6 +192,12 @@ const DonationHistory = ({ donations = [], categories = [] }) => {
     setSelectedItem(null);
   }, []);
 
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
   return (
     <div className="w-full bg-white rounded-lg shadow-sm">
       <div className="p-4">
@@ -145,25 +208,36 @@ const DonationHistory = ({ donations = [], categories = [] }) => {
           Check the status of recent donations
         </p>
 
-        <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-          {donations.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No donations yet</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Your donation history will appear here
-              </p>
+        {isLoading ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Loading donations...</p>
+          </div>
+        ) : donations.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No donations yet</p>
+            <p className="text-sm text-gray-400 mt-2">
+              Your donation history will appear here
+            </p>
+          </div>
+        ) : (
+          <div>
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+              {donations.map((item) => (
+                <DonationCard
+                  key={item.id}
+                  item={item}
+                  onClick={() => openItemDetails(item)}
+                  formatDate={formatDate}
+                />
+              ))}
             </div>
-          ) : (
-            donations.map(item => (
-              <DonationCard
-                key={item.id}
-                item={item}
-                onClick={() => openItemDetails(item)}
-                formatDate={formatDate}
-              />
-            ))
-          )}
-        </div>
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={closeModal}>
@@ -172,11 +246,9 @@ const DonationHistory = ({ donations = [], categories = [] }) => {
             <div className="flex items-start justify-between border-b border-gray-200 pb-4">
               <div>
                 <h3 className="text-lg font-medium text-gray-900">
-                  {categories.find(cat => cat.id === selectedItem.item?.category)?.name || 'Uncategorized'}
+                  {selectedItem.category?.name || 'Others'}
                 </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Donation Details
-                </p>
+                <p className="mt-1 text-sm text-gray-500">Donation Details</p>
               </div>
               <button
                 onClick={closeModal}
@@ -189,41 +261,45 @@ const DonationHistory = ({ donations = [], categories = [] }) => {
 
             <div className="mt-6">
               <div className="mb-6">
-                <ProgressBar currentStep={selectedItem.status || 'Processing'} />
+                <ProgressBar
+                  currentStep={
+                    selectedItem.is_picked_up
+                      ? 'Picked Up'
+                      : selectedItem.is_reserved
+                      ? 'Reserved'
+                      : 'Donation Offered'
+                  }
+                />
               </div>
 
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Description</h4>
+                  <h4 className="text-sm font-medium text-gray-900">
+                    Description
+                  </h4>
                   <p className="mt-1 text-sm text-gray-500">
-                    {selectedItem.item?.description || 'No description available'}
+                    {selectedItem.description || 'No description available'}
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Pickup Date</h4>
+                  <h4 className="text-sm font-medium text-gray-900">
+                    Pickup Window
+                  </h4>
                   <p className="mt-1 text-sm text-gray-500">
-                    {formatDate(new Date())}
+                    {selectedItem.pickup_window_start} -{' '}
+                    {selectedItem.pickup_window_end}
                   </p>
                 </div>
 
-                {selectedItem?.images?.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Images</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedItem.images.map((image, index) => (
-                        <div key={index} className="relative aspect-w-1 aspect-h-1">
-                          <img
-                            src={URL.createObjectURL(image)}
-                            alt={`Donation item ${index + 1}`}
-                            className="rounded-lg w-full h-48 object-cover"
-                            loading="lazy"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">
+                    Available Till
+                  </h4>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {formatDate(selectedItem.available_till)}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
