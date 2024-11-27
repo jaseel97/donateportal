@@ -6,6 +6,7 @@ import Modal from './Modal';
 import Category from './Category';
 import ProximityDropdown from './ProximityDropdown';
 import { useLocation } from 'react-router-dom';
+import UsernameAva from "./UsernameAva";
 
 function OrganizationHome() {
     const [filter, setFilter] = useState("");
@@ -151,9 +152,14 @@ function OrganizationHome() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
             <div className="max-w-7xl mx-auto p-6">
-                <h1 className="text-3xl font-bold text-sky-900 text-center mb-8 animate-slideDown">
-                    Organization Portal
-                </h1>
+            <div className="flex justify-center items-center mb-8 relative">
+          <h1 className="text-3xl font-bold text-sky-900 animate-slideDown">
+            Samaritan Portal
+          </h1>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
+            <UsernameAva username={username} />
+          </div>
+        </div>
 
                 <div className="flex flex-col lg:flex-row gap-6 max-w-7xl w-full mx-auto min-h-[calc(100vh-12rem)]">
                     <div className="flex-grow animate-slideInLeft h-full">
