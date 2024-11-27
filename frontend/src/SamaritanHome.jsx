@@ -28,9 +28,9 @@ export default function SamaritanHome() {
           Samaritan Donation Portal
         </h1>
         
-        <div className="flex flex-col md:flex-row gap-6 w-full mx-auto px-4">
+        <div className="flex flex-col md:flex-row gap-2 w-full mx-auto px-4">
           <div className="md:flex-grow animate-slideInLeft hover:scale-[1.01] transition-transform duration-300">
-            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+            <div className="bg-white rounded-lg shadow-md p-2 hover:shadow-lg transition-shadow duration-300">
               <DonationForm onSubmit={handleDonationSubmit} />
             </div>
           </div>

@@ -19,6 +19,7 @@ function OrganizationHome() {
     const [totalPages, setTotalPages] = useState(1);
     const [itemsPerPage] = useState(9);
     const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
+    const [pickupStatus, setPickupStatus] = useState(null);
     const [receivedDonations, setReceivedDonations] = useState([
         {
             id: 1,
@@ -39,6 +40,15 @@ function OrganizationHome() {
             images: []
         },
     ]);
+
+    const handlePickupSuccess = () => {
+        setPickupStatus('Item has been picked up!');
+        setHistoryRefreshTrigger(prev => prev + 1);
+        // Clear the message after 3 seconds
+        setTimeout(() => {
+            setPickupStatus(null);
+        }, 3000);
+    };
 
     const formatReadableDate = (isoDateString) => {
         if (!isoDateString) return ""; 
@@ -139,11 +149,10 @@ function OrganizationHome() {
     const handleReservationSuccess = () => {
         const selectedCategory = filter === "" ? "" : filter;
         fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
-        setHistoryRefreshTrigger(prev => prev + 1); // Trigger history refresh
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
+<div className="min-h-screen bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
             <div className="max-w-7xl mx-auto p-6">
                 <h1 className="text-3xl font-bold text-sky-900 text-center mb-8 animate-slideDown">
                     Organization Portal
@@ -246,6 +255,7 @@ function OrganizationHome() {
                             donations={receivedDonations}
                             categories={categories}
                             refreshTrigger={historyRefreshTrigger}
+                            onPickupSuccess={handlePickupSuccess}
                         />
                     </div>
                 </div>
@@ -267,4 +277,5 @@ function OrganizationHome() {
         </div>
     );
 }
+
 export default OrganizationHome;

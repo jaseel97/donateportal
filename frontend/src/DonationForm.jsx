@@ -122,7 +122,7 @@ const DonationForm = ({ onSubmit }) => {
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Add New Donation</h2>
           
-          <div className="flex gap-6 w-full mx-auto">
+          <div className="flex gap-2 w-full mx-auto">
             <Category
               id={formData.categoryID}
               value={formData.category}

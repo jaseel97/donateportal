@@ -26,7 +26,6 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
     picked_up_items: { items: [], total_pages: 1, total_items: 0 }
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
   const [pickupStatus, setPickupStatus] = useState(null);
 
   useEffect(() => {
@@ -57,7 +56,6 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
           "Content-Type": "application/json"
         },
         withCredentials: true,
-        params: { page: currentPage, items_per_page: 4 },
       });
 
       setDonations({
@@ -71,7 +69,7 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
 
   useEffect(() => {
     fetchDonations();
-  }, [currentPage, refreshTrigger]);
+  }, [refreshTrigger]);
 
   const filteredDonations = [
     ...donations.reserved_items.items.filter(item => filters.reserved),
@@ -83,12 +81,6 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
       ...prev,
       [filterName]: !prev[filterName]
     }));
-  };
-
-  const handlePageChange = (newPage) => {
-    if (newPage > 0 && newPage <= donations.reserved_items.total_pages) {
-      setCurrentPage(newPage);
-    }
   };
 
   const handlePickup = async (itemId) => {
@@ -108,63 +100,67 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
   };
 
   return (
-    <div className="w-full bg-white p-6 rounded-lg shadow-sm">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">History</h2>
-      <p className="text-sm text-center text-gray-500 mb-4">
-        Track your received donations
-      </p>
+    <div className="bg-white/90 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
+      {/* Header Section */}
+      <div className="p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">History</h2>
+        <p className="text-sm text-center text-gray-500 mb-4">
+          Track your received donations
+        </p>
 
-      {/* Filter Checkboxes */}
-      <div className="flex justify-center space-x-6 mb-6">
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={filters.reserved}
-            onChange={() => handleFilterChange('reserved')}
-            className="form-checkbox h-4 w-4 text-sky-500 rounded border-2 border-indigo-200 
-                       focus:ring-sky-500 focus:ring-2 focus:ring-offset-2 
-                       transition-colors duration-200"
-          />
-          <span className="text-sm text-gray-600">Reserved</span>
-        </label>
+        {/* Filter Checkboxes */}
+        <div className="flex justify-center space-x-6 mb-4">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.reserved}
+              onChange={() => handleFilterChange('reserved')}
+              className="form-checkbox h-4 w-4 text-sky-500 rounded border-2 border-indigo-200 
+                         focus:ring-sky-500 focus:ring-2 focus:ring-offset-2 
+                         transition-colors duration-200"
+            />
+            <span className="text-sm text-gray-600">Reserved</span>
+          </label>
 
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={filters.picked}
-            onChange={() => handleFilterChange('picked')}
-            className="form-checkbox h-4 w-4 text-sky-500 rounded border-2 border-indigo-200 
-                       focus:ring-sky-500 focus:ring-2 focus:ring-offset-2 
-                       transition-colors duration-200"
-          />
-          <span className="text-sm text-gray-600">Picked Up</span>
-        </label>
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.picked}
+              onChange={() => handleFilterChange('picked')}
+              className="form-checkbox h-4 w-4 text-sky-500 rounded border-2 border-indigo-200 
+                         focus:ring-sky-500 focus:ring-2 focus:ring-offset-2 
+                         transition-colors duration-200"
+            />
+            <span className="text-sm text-gray-600">Picked Up</span>
+          </label>
+        </div>
+
+        {pickupStatus && (
+          <div className="text-center p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg transition-all duration-300 shadow-sm">
+            <span className="flex items-center justify-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              {pickupStatus}
+            </span>
+          </div>
+        )}
       </div>
 
-      {pickupStatus && (
-        <div className="text-center p-3 mb-4 bg-green-100 border border-green-400 text-green-700 rounded-lg transition-all duration-300 shadow-sm">
-          <span className="flex items-center justify-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-            </svg>
-            {pickupStatus}
-          </span>
-        </div>
-      )}
-
-      <div className="space-y-6">
+      {/* History Cards Section - This is the only scrollable part */}
+      <div className="p-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 240px)' }}>
         {filteredDonations.length === 0 ? (
           <p className="text-gray-500 text-center py-8">No donations received yet</p>
         ) : (
           filteredDonations.map(item => (
             <div
               key={item.id}
-              className="bg-white border-2 border-indigo-200 rounded-lg p-6 
+              className="bg-white border-2 border-indigo-200 rounded-lg p-4 
                          hover:border-indigo-300 hover:bg-gradient-to-r hover:from-white/90 
                          hover:to-indigo-50/90 hover:scale-[1.01] hover:shadow-md 
                          transition-all duration-300 relative"
             >
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {/* Description Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Item:</span>
@@ -214,27 +210,6 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
             </div>
           ))
         )}
-      </div>
-
-      {/* Pagination Controls */}
-      <div className="flex justify-center mt-4">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          className="px-4 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-l"
-          disabled={currentPage === 1}
-        >
-          Previous
-        </button>
-        <span className="px-4 py-2 text-sm text-gray-700">
-          Page {currentPage} of {donations.reserved_items.total_pages}
-        </span>
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          className="px-4 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-r"
-          disabled={currentPage === donations.reserved_items.total_pages}
-        >
-          Next
-        </button>
       </div>
     </div>
   );

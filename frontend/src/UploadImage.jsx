@@ -7,7 +7,7 @@ const UploadImage = ({ images, onChange }) => {
       <label htmlFor="donation-images" className="block text-sm font-medium text-gray-700 mb-2">
         Upload Images
       </label>
-      <div className="flex justify-center rounded-lg border border-dashed border-gray-300 px-6 py-8 bg-gray-50">
+      <div className="flex justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
         <div className="text-center">
           <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
           <div className="mt-4 flex text-sm text-gray-600">
