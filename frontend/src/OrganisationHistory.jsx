@@ -15,7 +15,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const OrganisationHistory = ({ token, categories, onPickup }) => {
+const OrganisationHistory = ({ categories = {}, refreshTrigger }) => {
   const [filters, setFilters] = useState({
     picked: false,
     reserved: true
@@ -29,7 +29,18 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pickupStatus, setPickupStatus] = useState(null);
 
+  useEffect(() => {
+    if (pickupStatus) {
+      const timer = setTimeout(() => {
+        setPickupStatus(null);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [pickupStatus]);
+
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -60,12 +71,13 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
 
   useEffect(() => {
     fetchDonations();
-  }, [currentPage]);
+  }, [currentPage, refreshTrigger]);
 
   const filteredDonations = [
     ...donations.reserved_items.items.filter(item => filters.reserved),
     ...donations.picked_up_items.items.filter(item => filters.picked)
   ];
+
   const handleFilterChange = (filterName) => {
     setFilters(prev => ({
       ...prev,
@@ -87,11 +99,11 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
         },
         withCredentials: true,
       });
-      setPickupStatus('Item has been picked up!');
+      setPickupStatus('Item successfully picked up!');
       fetchDonations();
     } catch (error) {
+      setPickupStatus('Failed to mark item as picked up');
       console.error('Error marking item as picked up:', error);
-      setPickupStatus('Error occurred while picking up the item.');
     }
   };
 
@@ -130,8 +142,13 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
       </div>
 
       {pickupStatus && (
-        <div className="text-center text-green-600 mb-4">
-          {pickupStatus}
+        <div className="text-center p-3 mb-4 bg-green-100 border border-green-400 text-green-700 rounded-lg transition-all duration-300 shadow-sm">
+          <span className="flex items-center justify-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            {pickupStatus}
+          </span>
         </div>
       )}
 
@@ -158,14 +175,14 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Category:</span>
                   <span className="text-sm text-gray-600">
-                    {categories.options[item.category?.id] || 'Unknown'}
+                    {(categories?.options && item.category?.id) ? categories.options[item.category.id] : 'Unknown'}
                   </span>
                 </div>
 
                 {/* Status Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Status:</span>
-                  <StatusBadge status={item.is_picked_up ? 'Picked Up' : 'Reserved' } />
+                  <StatusBadge status={item.is_picked_up ? 'Picked Up' : 'Reserved'} />
                 </div>
 
                 {/* Date Line */}

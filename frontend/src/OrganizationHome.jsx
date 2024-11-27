@@ -18,6 +18,7 @@ function OrganizationHome() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [itemsPerPage] = useState(9);
+    const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0);
     const [receivedDonations, setReceivedDonations] = useState([
         {
             id: 1,
@@ -138,6 +139,7 @@ function OrganizationHome() {
     const handleReservationSuccess = () => {
         const selectedCategory = filter === "" ? "" : filter;
         fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
+        setHistoryRefreshTrigger(prev => prev + 1); // Trigger history refresh
     };
 
     return (
@@ -243,6 +245,7 @@ function OrganizationHome() {
                         <OrganisationHistory
                             donations={receivedDonations}
                             categories={categories}
+                            refreshTrigger={historyRefreshTrigger}
                         />
                     </div>
                 </div>
@@ -264,5 +267,4 @@ function OrganizationHome() {
         </div>
     );
 }
-
 export default OrganizationHome;
