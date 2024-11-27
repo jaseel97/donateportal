@@ -22,6 +22,21 @@ const Signup = () => {
             longitude: '90'
         }
     });
+    const canadianProvinces = [
+        "Alberta",
+        "British Columbia",
+        "Manitoba",
+        "New Brunswick",
+        "Newfoundland and Labrador",
+        "Nova Scotia",
+        "Ontario",
+        "Prince Edward Island",
+        "Quebec",
+        "Saskatchewan",
+        "Northwest Territories",
+        "Nunavut",
+        "Yukon"
+    ];
     const [message, setMessage] = useState('');
     const [isFlipped, setIsFlipped] = useState(false);
     const [activeForm, setActiveForm] = useState('samaritan');
@@ -241,16 +256,21 @@ const Signup = () => {
                                 <label htmlFor="address.province" className="block text-sm font-semibold text-gray-800">
                                     Province
                                 </label>
-                                <input
-                                    type="text"
+                                <select
                                     id="address.province"
                                     name="address.province"
                                     value={formData.address.province}
                                     onChange={handleInputChange}
-                                    placeholder="Enter your province"
                                     className="mt-2 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-700 sm:text-sm bg-blue-50"
                                     required
-                                />
+                                >
+                                    <option value="" disabled>Select your province</option>
+                                    {canadianProvinces.map((province) => (
+                                        <option key={province} value={province}>
+                                            {province}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             <button
                                 type="submit"
@@ -270,7 +290,7 @@ const Signup = () => {
                     </div>
                 ) : (
                     <div className="flex flex-col items-center w-full">
-                        <form onSubmit={handleSubmit} className="w-full space-y-6">
+                        <form onSubmit={handleSubmit} className="w-full grid gap-6">
                             {/* First Row: Email */}
                             <div className="flex flex-wrap gap-6">
                                 <div className="w-full">
@@ -426,11 +446,10 @@ const Signup = () => {
                             </div>
 
 
-                            {/* Submit button spans across two columns */}
-                            <div className="md:col-span-2">
+                            <div className="w-full">
                                 <button
                                     type="submit"
-                                    className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 rounded-lg hover:opacity-90 transition duration-300 text-lg font-semibold shadow-md w-full"
                                 >
                                     Sign Up
                                 </button>
@@ -447,7 +466,6 @@ const Signup = () => {
                         )}
                     </div>
                 )}
-
 
             </div>
         </div>
