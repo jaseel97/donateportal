@@ -6,7 +6,7 @@ import { useLocation } from 'react-router-dom';
 export default function SamaritanHome() {
   const [donations, setDonations] = useState([]);
   const location = useLocation();
-  const { username } = location.state || {}; // Get username from state
+  const { username } = location.state || {};
 
   console.log("User name from Samaritan Home Page:", username);
 

@@ -89,7 +89,7 @@ const Login = () => {
                 setMessage("Unknown user type.");
             }
         }
-    }, [userType, navigate, formData.username]);  // Trigger navigation when userType is updated
+    }, [userType, navigate, formData.username]); 
 
 
     const handleFlip = () => {

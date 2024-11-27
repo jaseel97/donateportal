@@ -226,7 +226,7 @@ function OrganizationHome() {
     const [selectedItem, setSelectedItem] = useState(null);
     const [isModalOpen, setModalOpen] = useState(false);
     const location = useLocation();
-    const { username } = location.state || {}; // Get username from state
+    const { username } = location.state || {}; 
 
     console.log("User name from Organization Home Page:", username);
 
