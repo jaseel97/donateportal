@@ -60,13 +60,12 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
 
   useEffect(() => {
     fetchDonations();
-  }, [currentPage]); 
+  }, [currentPage]);
 
   const filteredDonations = [
     ...donations.reserved_items.items.filter(item => filters.reserved),
     ...donations.picked_up_items.items.filter(item => filters.picked)
   ];
-
   const handleFilterChange = (filterName) => {
     setFilters(prev => ({
       ...prev,
@@ -76,7 +75,7 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
 
   const handlePageChange = (newPage) => {
     if (newPage > 0 && newPage <= donations.reserved_items.total_pages) {
-      setCurrentPage(newPage); 
+      setCurrentPage(newPage);
     }
   };
 
@@ -159,14 +158,14 @@ const OrganisationHistory = ({ token, categories, onPickup }) => {
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Category:</span>
                   <span className="text-sm text-gray-600">
-                    {categories[item.category?.id] || 'Unknown'}
+                    {categories.options[item.category?.id] || 'Unknown'}
                   </span>
                 </div>
 
                 {/* Status Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Status:</span>
-                  <StatusBadge status={item.is_reserved ? 'Reserved' : 'Picked Up'} />
+                  <StatusBadge status={item.is_picked_up ? 'Picked Up' : 'Reserved' } />
                 </div>
 
                 {/* Date Line */}
