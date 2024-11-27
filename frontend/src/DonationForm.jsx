@@ -4,6 +4,7 @@ import { apiDomain } from "./Config";
 import Category from './Category';
 import DatePicker from './DatePicker';
 import Calendar from './Calendar';
+import { Loader } from "@googlemaps/js-api-loader";
 
 const DonationForm = ({ onSubmit, onDonationSuccess }) => {
   const [formData, setFormData] = useState({
@@ -18,9 +19,96 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
     pickupWindowEnd: '17:00',
     availableTill: '',
     pickupLocation: '',
+    coordinates: {
+      latitude: null,
+      longitude: null
+    }
   });
   
   const [imagePreview, setImagePreview] = useState(null);
+
+  // Google Places Autocomplete states
+  const [suggestions, setSuggestions] = useState([]);
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
+  const [placesService, setPlacesService] = useState(null);
+
+  // Load Google Maps API
+  useEffect(() => {
+    const mapsKey = 'AIzaSyAQb8A0cRrWKqVwEl8cACxfeykZtBxmp8A';
+    const loader = new Loader({
+      apiKey: mapsKey,
+      version: 'weekly',
+      libraries: ['places']
+    });
+
+    loader.load().then(() => {
+      const service = new window.google.maps.places.PlacesService(
+        document.createElement('div')
+      );
+      setPlacesService(service);
+      setIsGoogleMapsLoaded(true);
+    }).catch((error) => {
+      console.error('Google Maps API load error:', error);
+    });
+  }, []);
+
+  // Fetch address suggestions
+  const fetchSuggestions = (input) => {
+    if (!isGoogleMapsLoaded || input.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+
+    const autocompleteService = new window.google.maps.places.AutocompleteService();
+    autocompleteService.getPlacePredictions(
+      {
+        input,
+        types: ['address'],
+        componentRestrictions: { country: 'ca' }
+      },
+      (predictions, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+          setSuggestions(predictions || []);
+        } else {
+          setSuggestions([]);
+        }
+      }
+    );
+  };
+
+  const handleLocationChange = (e) => {
+    const inputValue = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      pickupLocation: inputValue,
+      coordinates: {
+        latitude: null,
+        longitude: null
+      }
+    }));
+    fetchSuggestions(inputValue);
+  };
+
+  const handleSuggestionSelect = (suggestion) => {
+    if (!placesService) return;
+
+    placesService.getDetails(
+      { placeId: suggestion.place_id },
+      (place, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+          setFormData(prev => ({
+            ...prev,
+            pickupLocation: suggestion.description,
+            coordinates: {
+              latitude: place.geometry.location.lat(),
+              longitude: place.geometry.location.lng()
+            }
+          }));
+          setSuggestions([]);
+        }
+      }
+    );
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -67,7 +155,7 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
     e.preventDefault();
     const requiredFields = ['categoryID', 'about', 'availableTill', 'pickupLocation'];
     const missingFields = requiredFields.filter(field => !formData[field]);
-    
+
     if (missingFields.length > 0) {
       alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
       return;
@@ -79,12 +167,17 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
       submitFormData.append('image', formData.image);
     }
 
-    const jsonData = {
+    if (!formData.coordinates.latitude || !formData.coordinates.longitude) {
+      alert('Please select a valid address from the suggestions');
+      return;
+    }
+
+    const postData = {
       category: parseInt(formData.categoryID, 10),
       description: formData.about,
       pickup_location: {
-        latitude: 43.655070,
-        longitude: -79.345015
+        latitude: formData.coordinates.latitude,
+        longitude: formData.coordinates.longitude
       },
       weight: formData.weight || null,
       weight_unit: "kg",
@@ -128,7 +221,11 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
       pickupWindowStart: '09:00',
       pickupWindowEnd: '17:00',
       availableTill: '',
-      pickupLocation: ''
+      pickupLocation: '',
+      coordinates: {
+        latitude: null,
+        longitude: null
+      }
     });
     
     if (imagePreview) {
@@ -150,7 +247,7 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Add New Donation</h2>
-          
+
           <div className="flex gap-2 w-full mx-auto">
             <Category
               id={formData.categoryID}
@@ -232,20 +329,33 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
             </div>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-6 relative">
             <label htmlFor="pickup-location" className="categorylabel">
               Pickup Location*
             </label>
-            <textarea
+            <input
+              type="text"
               id="pickup-location"
               name="pickupLocation"
-              rows={1}
               value={formData.pickupLocation}
-              onChange={handleInputChange}
-              className="textareastyle resize-none"
-              placeholder="Add Pickup Location"
+              onChange={handleLocationChange}
+              className="textareastyle"
+              placeholder="Enter pickup location"
               required
             />
+            {suggestions.length > 0 && (
+              <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
+                {suggestions.map((suggestion) => (
+                  <li
+                    key={suggestion.place_id}
+                    onClick={() => handleSuggestionSelect(suggestion)}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                  >
+                    {suggestion.description}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="mb-6">
