@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from "axios";
 import { apiDomain } from "./Config";
-import { PhotoIcon } from '@heroicons/react/24/solid';
 import Category from './Category';
 import DatePicker from './DatePicker';
-import UploadImage from './UploadImage';
 import Calendar from './Calendar';
 
 const DonationForm = ({ onSubmit }) => {
@@ -12,7 +10,7 @@ const DonationForm = ({ onSubmit }) => {
     category: '',
     categoryID: '',
     about: '',
-    images: [],
+    image: null,
     weight: '',
     volume: '',
     bestBefore: '',
@@ -21,6 +19,8 @@ const DonationForm = ({ onSubmit }) => {
     availableTill: '',
     pickupLocation: '',
   });
+  
+  const [imagePreview, setImagePreview] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -40,11 +40,16 @@ const DonationForm = ({ onSubmit }) => {
   };
 
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setFormData(prev => ({
-      ...prev,
-      images: files
-    }));
+    const file = e.target.files[0];
+    if (file) {
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      
+      setFormData(prev => ({
+        ...prev,
+        image: file
+      }));
+    }
   };
 
   const convertToISO = (input) => {
@@ -68,7 +73,13 @@ const DonationForm = ({ onSubmit }) => {
       return;
     }
 
-    const postData = {
+    const submitFormData = new FormData();
+    
+    if (formData.image) {
+      submitFormData.append('image', formData.image);
+    }
+
+    const jsonData = {
       category: parseInt(formData.categoryID, 10),
       description: formData.about,
       pickup_location: {
@@ -85,18 +96,22 @@ const DonationForm = ({ onSubmit }) => {
       available_till: convertToISO(formData.availableTill)
     };
 
+    submitFormData.append('data', JSON.stringify(jsonData));
+
     try {
-      const response = await axios.post(`${apiDomain}/samaritan/donate`, postData, {
+      const response = await axios.post(`${apiDomain}/samaritan/donate`, submitFormData, {
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'multipart/form-data',
         },
         withCredentials: true
       });
+      
       console.log("Donation saved successfully:", response.data);
       onSubmit(response.data);
       handleReset();
     } catch (error) {
       console.error("Error saving donation:", error);
+      alert(error.response?.data?.error || "Error saving donation");
     }
   };
 
@@ -105,7 +120,7 @@ const DonationForm = ({ onSubmit }) => {
       categoryID: '',
       category: '',
       about: '',
-      images: [],
+      image: null,
       weight: '',
       volume: '',
       bestBefore: '',
@@ -114,7 +129,20 @@ const DonationForm = ({ onSubmit }) => {
       availableTill: '',
       pickupLocation: ''
     });
+    
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   return (
     <div className="flex-1 w-full bg-white p-6 rounded-lg shadow-sm">
@@ -220,10 +248,33 @@ const DonationForm = ({ onSubmit }) => {
             />
           </div>
 
-          <UploadImage
-            images={formData.images}
-            onChange={handleImageChange}
-          />
+          <div className="mb-6">
+            <label className="categorylabel">
+              Upload Image
+            </label>
+            <div className="mt-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+              />
+            </div>
+            {imagePreview && (
+              <div className="mt-4">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="max-w-xs h-auto rounded-lg shadow-sm"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-4 pt-6">
