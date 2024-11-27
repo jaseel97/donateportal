@@ -24,7 +24,7 @@ const DonationCard = React.memo(({ item, categories, formatDate, onPickup, onUnr
       <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-md overflow-hidden">
         {item.image_url ? (
           <img
-            src={`http://localhost:8080${item.image_url}`}
+            src={`${apiDomain}${item.image_url}`}
             alt={item.description || 'Donation item'}
             className="w-full h-full object-cover transform transition-transform duration-300 group-hover:scale-110"
             onError={(e) => {

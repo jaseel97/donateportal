@@ -122,7 +122,7 @@ const Modal = ({
                                     <div className="mt-2 flex justify-center">
                                         <div className="w-1/2">
                                             <img 
-                                                src={`http://localhost:8080${selectedItem.image_url}`}
+                                                src={`${apiDomain}${selectedItem.image_url}`}
                                                 alt={selectedItem.description}
                                                 className="w-full h-auto rounded-lg shadow-md"
                                             />

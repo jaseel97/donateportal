@@ -64,7 +64,7 @@ const Modal = ({ isOpen, onClose, children }) => {
 const DonationCard = React.memo(({ item, onClick, formatDate }) => {
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return null;
-    return `http://localhost:8080${imageUrl}`;
+    return `${apiDomain}${imageUrl}`;
   };
 
   const imageUrl = getImageUrl(item.image_url);
@@ -175,7 +175,7 @@ const DonationHistory = ({ refreshTrigger, username }) => {
 
   const getImageUrl = useCallback((imageUrl) => {
     if (!imageUrl) return null;
-    return `http://localhost:8080${imageUrl}`;
+    return `${apiDomain}${imageUrl}`;
   }, []);
 
   return (

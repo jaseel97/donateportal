@@ -91,28 +91,28 @@ def signup_organization(request):
         organization.set_password(user_data['password'])
         organization.save()
 
-        print("Testing...")
-        print(organization.username)
+        # print("Testing...")
+        # print(organization.username)
 
-        token = generate_jwt_token({
-            'username': organization.username,
-            'email': organization.email,
-            'is_staff': False,
-            'user_type': organization.user_type,
-        })
+        # token = generate_jwt_token({
+        #     'username': organization.username,
+        #     'email': organization.email,
+        #     'is_staff': False,
+        #     'user_type': organization.user_type,
+        # })
         #
         response = JsonResponse({
             'message': 'Sign up is successful',
         })
 
-        response.set_cookie(
-            key='jwt',
-            value=token,
-            httponly=True,
-            secure=False,
-            samesite='Lax',
-            max_age=24 * 60 * 60
-        )
+        # response.set_cookie(
+        #     key='jwt',
+        #     value=token,
+        #     httponly=True,
+        #     secure=False,
+        #     samesite='Lax',
+        #     max_age=24 * 60 * 60
+        # )
 
         return response
 

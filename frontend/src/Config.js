@@ -1,1 +1,1 @@
-export const apiDomain = 'http://localhost:8080'
+export const apiDomain =  'http://samaritanconnect.com/api'//'http://localhost:8080'
