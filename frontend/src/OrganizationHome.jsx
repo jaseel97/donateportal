@@ -45,7 +45,7 @@ function OrganizationHome() {
     const location = useLocation();
     const { username } = location.state || {}; 
 
-    console.log("User name from Organization Home Page:", username);
+    // console.log("User name from Organization Home Page:", username);
 
     const formatReadableDate = (isoDateString) => {
         if (!isoDateString) return ""; 
@@ -95,7 +95,8 @@ function OrganizationHome() {
                 pickupEnd: item?.pickup_window_end,
                 availableTill: formatReadableDate(item?.available_till),
                 distanceKm: item?.distance_km,
-                bestBefore: formatReadableDate(item?.best_before)
+                bestBefore: formatReadableDate(item?.best_before),
+                image_url: item?.image_url
             }));
 
             setItems(mappedItems);
@@ -154,7 +155,7 @@ function OrganizationHome() {
             <div className="max-w-7xl mx-auto p-6">
             <div className="flex justify-center items-center mb-8 relative">
           <h1 className="text-3xl font-bold text-sky-900 animate-slideDown">
-            Samaritan Portal
+            Organization Home
           </h1>
           <div className="absolute right-0 top-1/2 -translate-y-1/2">
             <UsernameAva username={username} />

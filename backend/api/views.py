@@ -215,6 +215,11 @@ def login(request):
                 'is_staff': False,
                 'user_type': specific_user.user_type,
             }
+
+            if specific_user.user_type in ['Organization', 'organization']:
+                token_payload['latitude'] = specific_user.location.y,
+                token_payload['longitude'] = specific_user.location.x
+
             token = generate_jwt_token(token_payload)
             print("JWT token sent:", token)
             
@@ -257,87 +262,6 @@ def logout(request):
     except Exception as e:
         print(f"Logout error: {str(e)}")
         return JsonResponse({'error': 'Logout failed'}, status=500)
-
-# @token_required
-# def change_password(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
-        
-#     data = json.loads(request.body)
-#     old_password = data.get('old_password')
-#     new_password = data.get('new_password')
-    
-#     try:
-#         user = User.objects.get(id=request.user_id)
-#         if user.check_password(old_password):
-#             user.set_password(new_password)
-#             user.save()
-#             return JsonResponse({'message': 'Password successfully changed'})
-#         else:
-#             return JsonResponse({'error': 'Current password is incorrect'}, status=400)
-#     except User.DoesNotExist:
-#         return JsonResponse({'error': 'User not found'}, status=404)
-
-# @token_required
-# def get_user_profile(request):
-#     if request.method != 'GET':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
-    
-#     return JsonResponse({
-#         'email': request.user_email,
-#         'is_admin': request.is_admin
-#     })
-
-# @csrf_exempt
-# def request_password_reset(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
-    
-#     data = json.loads(request.body)
-#     email = data.get('email')
-    
-#     try:
-#         user = User.objects.get(email=email)
-#         token = default_token_generator.make_token(user)
-#         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
-#         reset_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/reset-password/{uid}/{token}"
-#         send_mail(
-#             'Password Reset Request',
-#             f'Click the following link to reset your password: {reset_url}',
-#             settings.DEFAULT_FROM_EMAIL,
-#             [email],
-#             fail_silently=False,
-#         )
-#         return JsonResponse({'message': 'Password reset email sent'})
-#     except User.DoesNotExist:
-#         return JsonResponse({'error': 'User not found'}, status=404)
-
-# @csrf_exempt
-# def reset_password(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
-    
-#     data = json.loads(request.body)
-#     password = data.get('password')
-#     token = data.get('token')
-#     uidb64 = data.get('uid')
-    
-#     try:
-#         uid = force_str(urlsafe_base64_decode(uidb64))
-#         user = User.objects.get(pk=uid)
-        
-#         if default_token_generator.check_token(user, token):
-#             user.set_password(password)
-#             user.save()
-#             return JsonResponse({'message': 'Password successfully reset'})
-#         else:
-#             return JsonResponse({'error': 'Invalid reset link'}, status=400)
-#     except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-#         return JsonResponse({'error': 'Invalid reset link'}, status=400)
-
-
-
 
 #------------------------------------------------- App Views -------------------------------------------------#
 @csrf_exempt
@@ -620,11 +544,15 @@ def browse_item_listings(request):
             is_picked_up=False
         )
 
+        for item in queryset:
+            for field in item._meta.fields:
+                print(f"{field.name}: {getattr(item, field.name)}")
+            print("-" * 20)
         if category is not None and category != 0:
             queryset = queryset.filter(category=category)
         
         try:
-            queryset = Item.objects.filter(pickup_location__distance_lte=(organization.location, D(m=radius_m)))
+            queryset = queryset.filter(pickup_location__distance_lte=(organization.location, D(m=radius_m)))
 
             queryset = queryset.annotate(
                 distance=DistanceDBFunction('pickup_location', organization.location)

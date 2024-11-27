@@ -62,17 +62,28 @@ const Modal = ({ isOpen, onClose, children }) => {
 };
 
 const DonationCard = React.memo(({ item, onClick, formatDate }) => {
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    return `http://localhost:8080${imageUrl}`;
+  };
+
+  const imageUrl = getImageUrl(item.image_url);
+
   return (
     <div
       onClick={onClick}
       className="group relative flex items-center space-x-3 bg-white border rounded-lg p-4 hover:shadow-lg cursor-pointer transition-all duration-300 ease-in-out hover:border-blue-200"
     >
       <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-md overflow-hidden">
-        {item.images?.length > 0 ? (
+        {imageUrl ? (
           <img
-            src={item.images[0]}
-            alt=""
+            src={imageUrl}
+            alt={item.description || 'Donation item'}
             className="w-full h-full object-cover transform transition-transform duration-300 group-hover:scale-110"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = '/placeholder-image.png'; // Add a placeholder image path
+            }}
           />
         ) : (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center">
@@ -135,7 +146,7 @@ const DonationHistory = ({ refreshTrigger, username }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [username]);
 
   useEffect(() => {
     fetchDonations(currentPage);
@@ -162,9 +173,13 @@ const DonationHistory = ({ refreshTrigger, username }) => {
     setSelectedItem(null);
   }, []);
 
+  const getImageUrl = useCallback((imageUrl) => {
+    if (!imageUrl) return null;
+    return `http://localhost:8080${imageUrl}`;
+  }, []);
+
   return (
     <div className="bg-white/90 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
-      {/* Fixed Header Section */}
       <div className="p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
           Donation History
@@ -174,7 +189,6 @@ const DonationHistory = ({ refreshTrigger, username }) => {
         </p>
       </div>
 
-      {/* Scrollable Content Section */}
       <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
         {isLoading ? (
           <div className="text-center py-8">
@@ -221,6 +235,20 @@ const DonationHistory = ({ refreshTrigger, username }) => {
             </div>
 
             <div className="mt-6">
+              {selectedItem.image_url && (
+                <div className="mb-6">
+                  <img
+                    src={getImageUrl(selectedItem.image_url)}
+                    alt={selectedItem.description || 'Donation item'}
+                    className="w-full h-48 object-cover rounded-lg"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/placeholder-image.png';
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="mb-6">
                 <ProgressBar
                   currentStep={
@@ -235,28 +263,21 @@ const DonationHistory = ({ refreshTrigger, username }) => {
 
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">
-                    Description
-                  </h4>
+                  <h4 className="text-sm font-medium text-gray-900">Description</h4>
                   <p className="mt-1 text-sm text-gray-500">
                     {selectedItem.description || 'No description available'}
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">
-                    Pickup Window
-                  </h4>
+                  <h4 className="text-sm font-medium text-gray-900">Pickup Window</h4>
                   <p className="mt-1 text-sm text-gray-500">
-                    {selectedItem.pickup_window_start} -{' '}
-                    {selectedItem.pickup_window_end}
+                    {selectedItem.pickup_window_start} - {selectedItem.pickup_window_end}
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">
-                    Available Till
-                  </h4>
+                  <h4 className="text-sm font-medium text-gray-900">Available Till</h4>
                   <p className="mt-1 text-sm text-gray-500">
                     {formatDate(selectedItem.available_till)}
                   </p>

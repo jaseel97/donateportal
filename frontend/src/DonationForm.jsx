@@ -4,6 +4,7 @@ import { apiDomain } from "./Config";
 import Category from './Category';
 import DatePicker from './DatePicker';
 import Calendar from './Calendar';
+import UploadImage from './UploadImage';
 import { Loader } from "@googlemaps/js-api-loader";
 
 const DonationForm = ({ onSubmit, onDonationSuccess }) => {
@@ -24,13 +25,21 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
       longitude: null
     }
   });
-  
-  const [imagePreview, setImagePreview] = useState(null);
 
   // Google Places Autocomplete states
   const [suggestions, setSuggestions] = useState([]);
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const [placesService, setPlacesService] = useState(null);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData(prev => ({
+        ...prev,
+        image: file
+      }));
+    }
+  };
 
   // Load Google Maps API
   useEffect(() => {
@@ -127,19 +136,6 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
     }));
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-      
-      setFormData(prev => ({
-        ...prev,
-        image: file
-      }));
-    }
-  };
-
   const convertToISO = (input) => {
     const [datePart, startTime] = input.split(' ');
     const [year, month, day] = datePart.split('-').map(Number);
@@ -189,7 +185,7 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
       available_till: convertToISO(formData.availableTill)
     };
 
-    submitFormData.append('data', JSON.stringify(jsonData));
+    submitFormData.append('data', JSON.stringify(postData));
 
     try {
       const response = await axios.post(`${apiDomain}/samaritan/donate`, submitFormData, {
@@ -201,7 +197,7 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
       
       console.log("Donation saved successfully:", response.data);
       onSubmit(response.data);
-      onDonationSuccess(); // Call the success callback to refresh history
+      onDonationSuccess();
       handleReset();
     } catch (error) {
       console.error("Error saving donation:", error);
@@ -227,20 +223,7 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
         longitude: null
       }
     });
-    
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-      setImagePreview(null);
-    }
   };
-
-  useEffect(() => {
-    return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
-    };
-  }, [imagePreview]);
 
   return (
     <div className="flex-1 w-full bg-white/90 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
@@ -358,33 +341,11 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
             )}
           </div>
 
-          <div className="mb-6">
-            <label className="categorylabel">
-              Upload Image
-            </label>
-            <div className="mt-2">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-md file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100"
-              />
-            </div>
-            {imagePreview && (
-              <div className="mt-4">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="max-w-xs h-auto rounded-lg shadow-sm"
-                />
-              </div>
-            )}
-          </div>
+          <UploadImage
+            image={formData.image}
+            onChange={handleImageChange}
+            setFormData={setFormData}
+          />
         </div>
 
         <div className="flex justify-end gap-4 pt-6">
