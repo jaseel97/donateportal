@@ -27,32 +27,47 @@ def index(request):
 def signup_organization(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Invalid request method'}, status=400)
-    
+
     try:
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-        
+
         is_valid, error_message = validate_organization_data(data)
         
         print("Validation Complete! isValid : ", is_valid)
-        
+
         if not is_valid:
             return JsonResponse({'error': error_message}, status=400)
+
+        # Ensure location and address fields exist
+        location_data = data.get('location')
+        if not location_data:
+            return JsonResponse({'error': 'Location data is missing'}, status=400)
         
-        # flatten
-        location_data = data.pop('location')
-        point = Point(location_data['longitude'], location_data['latitude'])
-        address_data = data.pop('address')
-        
+        # Validate latitude and longitude
+        try:
+            latitude = float(location_data['latitude'])
+            longitude = float(location_data['longitude'])
+        except (ValueError, KeyError):
+            return JsonResponse({'error': 'Invalid or missing latitude/longitude values'}, status=400)
+
+        # Ensure address data exists
+        address_data = data.get('address')
+        if not address_data:
+            return JsonResponse({'error': 'Address data is missing'}, status=400)
+
+        # Flatten the address and location data
+        point = Point(longitude, latitude)
+
         user_data = {
             'username': data.get('username'),
             'email': data.get('email'),
             'password': data.get('password'),
-            'is_staff':False
+            'is_staff': False
         }
-        
+
         # Create organization-specific data dictionary
         org_data = {
             'name': data.get('name'),
@@ -63,29 +78,29 @@ def signup_organization(request):
             'province': address_data.get('province'),
             'postal_code': address_data.get('postal_code'),
         }
-        
+
         organization = Organization.objects.create(
             **user_data,
             **org_data
         )
-        
+
         organization.set_password(user_data['password'])
         organization.save()
-        
+
         print("Testing...")
         print(organization.username)
-        
+
         token = generate_jwt_token({
             'username': organization.username,
             'email': organization.email,
             'is_staff': False,
             'user_type': organization.user_type,
         })
-        
+
         response = JsonResponse({
             'message': 'Sign up is successful',
         })
-        
+
         response.set_cookie(
             key='jwt',
             value=token,
@@ -94,14 +109,15 @@ def signup_organization(request):
             samesite='Lax',
             max_age=24 * 60 * 60
         )
-        
+
         return response
-    
+
     except Exception as e:
         print(f"Error during user creation: {str(e)}")
         return JsonResponse({
             'error': 'Failed to create new account'
         }, status=500)
+
 
 @csrf_exempt
 def signup_samaritan(request):
