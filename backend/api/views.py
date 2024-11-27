@@ -96,7 +96,7 @@ def signup_organization(request):
             'is_staff': False,
             'user_type': organization.user_type,
         })
-
+        #
         response = JsonResponse({
             'message': 'Sign up is successful',
         })

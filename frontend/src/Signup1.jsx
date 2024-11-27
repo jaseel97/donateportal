@@ -101,6 +101,7 @@ const Signup = () => {
                 // } else {
                 //     setMessage('Error: Unknown user type.');
                 // }
+                //
             } else {
                 setMessage(data.error || 'Signup failed. Please try again.');
             }
