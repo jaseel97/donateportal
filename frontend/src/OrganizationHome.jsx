@@ -109,11 +109,36 @@ function OrganizationHome() {
 
     const handleDirectionsClick = (e, item) => {
         e.stopPropagation(); // Prevent the card's onClick from triggering
+        
         // Extract coordinates from the POINT string
         const coordinatesMatch = item.pickupLocation.match(/POINT \((.*?) (.*?)\)/);
+        
         if (coordinatesMatch) {
-            const [_, longitude, latitude] = coordinatesMatch;
-            window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
+            const [_, pickup_longitude, pickup_latitude] = coordinatesMatch;
+            
+            // Get the JWT cookie
+            const jwt = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('jwt='))
+                ?.split('=')[1];
+                
+            if (!jwt) {
+                console.error('JWT cookie not found');
+                return;
+            }
+            
+            try {
+                const payload = JSON.parse(atob(jwt.split('.')[1]));
+                const { latitude: dest_latitude, longitude: dest_longitude } = payload;
+                
+                const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${dest_latitude},${dest_longitude}&destination=${pickup_latitude},${pickup_longitude}`;
+
+                window.open(directionsUrl, '_blank');
+            } catch (error) {
+                console.error('Error processing coordinates:', error);
+            }
+        } else {
+            console.error('Invalid pickup location format');
         }
     };
 
@@ -273,6 +298,10 @@ function OrganizationHome() {
                             categories={categories}
                             refreshTrigger={historyRefreshTrigger}
                             username={username}
+                            onHistoryChange={() => {
+                                const selectedCategory = filter === "" ? "" : filter;
+                                fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
+                            }}
                         />
                     </div>
                 </div>

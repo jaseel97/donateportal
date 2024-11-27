@@ -977,6 +977,72 @@ def reserve_item(request, item_id):
 
 @csrf_exempt
 @token_required()
+def unreserve_item(request, item_id):
+    """
+    Allow an organization to cancel their reservation of an item.
+    Only the organization that reserved the item can cancel the reservation.
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+        
+    if request.user_type != 'organization':
+        return JsonResponse({"error": "Only organizations can cancel reservations"}, status=403)
+        
+    try:
+        with transaction.atomic():
+            # Get and lock the item for update
+            try:
+                item = Item.objects.select_for_update().get(id=item_id)
+            except Item.DoesNotExist:
+                return JsonResponse({"error": "Item not found"}, status=404)
+            
+            # Validate item state
+            if not item.is_active:
+                return JsonResponse({"error": "Item is not active"}, status=400)
+                
+            if not item.is_reserved:
+                return JsonResponse({"error": "Item is not reserved"}, status=400)
+                
+            if item.is_picked_up:
+                return JsonResponse({"error": "Cannot unreserve an item that has been picked up"}, status=400)
+
+            try:
+                organization = Organization.objects.get(username=request.username)
+                # Check if this organization is the one that reserved it
+                if item.reserved_by != organization:
+                    return JsonResponse({
+                        "error": "Only the organization that reserved this item can cancel the reservation"
+                    }, status=403)
+            except Organization.DoesNotExist:
+                return JsonResponse({"error": "Organization not found"}, status=404)
+            
+            # Clear the reservation
+            item.is_reserved = False
+            item.reserved_by = None
+            item.save(update_fields=['is_reserved', 'reserved_by'])
+            
+            return JsonResponse({
+                "message": "Reservation cancelled successfully",
+                "item": {
+                    "id": item.id,
+                    "category": {
+                        "id": item.category,
+                        "name": dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    "description": item.description,
+                    "is_active": item.is_active,
+                    "is_reserved": item.is_reserved,
+                    "is_picked_up": item.is_picked_up,
+                    "reserved_by": None,
+                    'image_url': item.image.url if item.image else None
+                }
+            }, status=200)
+            
+    except Exception as e:
+        return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
+
+@csrf_exempt
+@token_required()
 def pickup_item(request, item_id):
     """
     Allow either the organization that reserved the item or the samaritan to mark an item as picked up.

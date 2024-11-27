@@ -18,7 +18,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const DonationCard = React.memo(({ item, categories, formatDate, onPickup }) => {
+const DonationCard = React.memo(({ item, categories, formatDate, onPickup, onUnreserve }) => {
   return (
     <div className="group relative flex items-center space-x-3 bg-white border rounded-lg p-4 hover:shadow-lg transition-all duration-300 ease-in-out hover:border-blue-200">
       <div className="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-md overflow-hidden">
@@ -54,33 +54,41 @@ const DonationCard = React.memo(({ item, categories, formatDate, onPickup }) => 
         </p>
         
         {item.is_reserved && !item.is_picked_up && (
-          <button
-            onClick={() => onPickup(item.id)}
-            className="mt-2 px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors duration-300"
-          >
-            Mark As Collected
-          </button>
+          <div className="mt-2 flex space-x-2">
+            <button
+              onClick={() => onPickup(item.id)}
+              className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors duration-300"
+            >
+              Mark As Collected
+            </button>
+            <button
+              onClick={() => onUnreserve(item.id)}
+              className="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors duration-300"
+            >
+              Unreserve
+            </button>
+          </div>
         )}
       </div>
     </div>
   );
 });
 
-const OrganisationHistory = ({ categories = {}, refreshTrigger, username }) => {
+const OrganisationHistory = ({ categories = {}, refreshTrigger, username, onHistoryChange }) => {
   const [activeTab, setActiveTab] = useState('reserved');
   const [donations, setDonations] = useState({
     reserved_items: { items: [], total_pages: 1, total_items: 0 },
     picked_up_items: { items: [], total_pages: 1, total_items: 0 }
   });
-  const [pickupStatus, setPickupStatus] = useState(null);
+  const [statusMessage, setStatusMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (pickupStatus) {
-      const timer = setTimeout(() => setPickupStatus(null), 2000);
+    if (statusMessage) {
+      const timer = setTimeout(() => setStatusMessage(null), 2000);
       return () => clearTimeout(timer);
     }
-  }, [pickupStatus]);
+  }, [statusMessage]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -128,13 +136,28 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger, username }) => {
         headers: { "Content-Type": "application/json" },
         withCredentials: true,
       });
-      setPickupStatus('Item successfully picked up!');
+      setStatusMessage('Item successfully picked up!');
       fetchDonations();
     } catch (error) {
-      setPickupStatus('Failed to mark item as picked up');
+      setStatusMessage('Failed to mark item as picked up');
       console.error('Error marking item as picked up:', error);
     }
   };
+
+  const handleUnreserve = async (itemId) => {
+    try {
+        await axios.post(`${apiDomain}/item/${itemId}/unreserve`, {}, {
+            headers: { "Content-Type": "application/json" },
+            withCredentials: true,
+        });
+        setStatusMessage('Reservation successfully cancelled!');
+        fetchDonations();
+        onHistoryChange(); // Add this line
+    } catch (error) {
+        setStatusMessage('Failed to cancel reservation');
+        console.error('Error cancelling reservation:', error);
+    }
+};
 
   const filteredDonations = activeTab === 'reserved' 
     ? donations.reserved_items.items 
@@ -167,9 +190,9 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger, username }) => {
           </button>
         </div>
 
-        {pickupStatus && (
+        {statusMessage && (
           <div className="text-center p-3 bg-green-100 text-green-700 rounded-lg mb-4 transition-all duration-300">
-            {pickupStatus}
+            {statusMessage}
           </div>
         )}
       </div>
@@ -197,6 +220,7 @@ const OrganisationHistory = ({ categories = {}, refreshTrigger, username }) => {
                 categories={categories}
                 formatDate={formatDate}
                 onPickup={handlePickup}
+                onUnreserve={handleUnreserve}
               />
             ))}
           </div>

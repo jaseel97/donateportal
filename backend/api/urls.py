@@ -14,6 +14,7 @@ urlpatterns = [
     path('samaritan/<str:username>/items', views.get_samaritan_items, name='samaritan_donated_items'),
 
     path('item/<int:item_id>/reserve', views.reserve_item, name='reserve_item'),
+    path('item/<int:item_id>/unreserve', views.unreserve_item, name='unreserve_item'),
     path('item/<int:item_id>/pickup', views.pickup_item, name='mark_item_picked_up'),
 
     path('auth/organization/signup', views.signup_organization, name='signup_organization'),
