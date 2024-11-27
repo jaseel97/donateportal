@@ -29,10 +29,9 @@ const Signup = () => {
 
   // Load Google Maps API
   useEffect(() => {
-    // console.log(process.env.REACT_APP_GOOGLE_MAPS_API_KEY)
-    console.log(import.meta.env.VITE_GOOGLE_MAPS_API_KEY)
+    const mapsKey=import.meta.env.VITE_MAP_KEY
     const loader = new Loader({
-      apiKey: AIzaSyAQb8A0cRrWKqVwEl8cACxfeykZtBxmp8A,
+      apiKey: mapsKey,
       version: 'weekly',
       libraries: ['places']
     });
