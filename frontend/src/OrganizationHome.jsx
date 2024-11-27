@@ -39,13 +39,6 @@ function OrganizationHome() {
         },
     ]);
 
-    const categoryList = [
-        { id: 'clothes', name: 'Clothes' },
-        { id: 'food', name: 'Food' },
-        { id: 'toys', name: 'Toys' },
-        { id: 'others', name: 'Others' }
-    ];
-
     const formatReadableDate = (isoDateString) => {
         if (!isoDateString) return ""; 
         return new Date(isoDateString).toLocaleDateString("en-US", {
@@ -249,7 +242,7 @@ function OrganizationHome() {
                     <div className="w-full lg:w-96 animate-slideInRight hover:scale-[1.02] transition-transform duration-300">
                         <OrganisationHistory
                             donations={receivedDonations}
-                            categories={categoryList}
+                            categories={categories}
                         />
                     </div>
                 </div>

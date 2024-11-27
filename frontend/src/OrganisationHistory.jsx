@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { apiDomain } from './Config';
 
 const StatusBadge = ({ status }) => {
   const statusStyles = {
-    'Reserved': 'bg-red-100 text-red-800',
+    Reserved: 'bg-red-100 text-red-800',
     'Picked Up': 'bg-blue-100 text-blue-800'
   };
 
@@ -13,11 +15,19 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const OrganisationHistory = ({ donations, categories, onPickup }) => {
+const OrganisationHistory = ({ token, categories, onPickup }) => {
   const [filters, setFilters] = useState({
     picked: false,
     reserved: true
   });
+
+  const [donations, setDonations] = useState({
+    reserved_items: { items: [], total_pages: 1, total_items: 0 },
+    picked_up_items: { items: [], total_pages: 1, total_items: 0 }
+  });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pickupStatus, setPickupStatus] = useState(null);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('en-US', {
@@ -29,22 +39,60 @@ const OrganisationHistory = ({ donations, categories, onPickup }) => {
     });
   };
 
-  const filteredDonations = donations.filter(donation => {
-    if (filters.picked && filters.reserved) {
-      return donation.status === 'Reserved' || donation.status === 'Picked Up';
-    } else if (filters.picked) {
-      return donation.status === 'Picked Up';
-    } else if (filters.reserved) {
-      return donation.status === 'Reserved';
-    }
-    return true;
-  });
+  const fetchDonations = async () => {
+    try {
+      const interactedItems = await axios.get(`${apiDomain}/organization/TangoDjango/items`, {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        withCredentials: true,
+        params: { page: currentPage, items_per_page: 4 },
+      });
 
+      setDonations({
+        reserved_items: interactedItems.data.reserved_items,
+        picked_up_items: interactedItems.data.picked_up_items
+      });
+    } catch (error) {
+      console.error('Error fetching donations:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDonations();
+  }, [currentPage]);
+
+  const filteredDonations = [
+    ...donations.reserved_items.items.filter(item => filters.reserved),
+    ...donations.picked_up_items.items.filter(item => filters.picked)
+  ];
   const handleFilterChange = (filterName) => {
     setFilters(prev => ({
       ...prev,
       [filterName]: !prev[filterName]
     }));
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage > 0 && newPage <= donations.reserved_items.total_pages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePickup = async (itemId) => {
+    try {
+      await axios.post(`${apiDomain}/item/${itemId}/pickup`, {}, {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        withCredentials: true,
+      });
+      setPickupStatus('Item has been picked up!');
+      fetchDonations();
+    } catch (error) {
+      console.error('Error marking item as picked up:', error);
+      setPickupStatus('Error occurred while picking up the item.');
+    }
   };
 
   return (
@@ -81,6 +129,12 @@ const OrganisationHistory = ({ donations, categories, onPickup }) => {
         </label>
       </div>
 
+      {pickupStatus && (
+        <div className="text-center text-green-600 mb-4">
+          {pickupStatus}
+        </div>
+      )}
+
       <div className="space-y-6">
         {filteredDonations.length === 0 ? (
           <p className="text-gray-500 text-center py-8">No donations received yet</p>
@@ -104,55 +158,38 @@ const OrganisationHistory = ({ donations, categories, onPickup }) => {
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Category:</span>
                   <span className="text-sm text-gray-600">
-                    {categories.find(cat => cat.id === item.category)?.name || 'Unknown'}
+                    {categories.options[item.category?.id] || 'Unknown'}
                   </span>
                 </div>
 
                 {/* Status Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Status:</span>
-                  <StatusBadge status={item.status || 'processing'} />
+                  <StatusBadge status={item.is_picked_up ? 'Picked Up' : 'Reserved' } />
                 </div>
 
                 {/* Date Line */}
                 <div className="flex items-center">
                   <span className="text-sm font-medium text-gray-700 w-24">Date:</span>
-                  <span className="text-sm text-gray-600">{formatDate(item.pickupDate)}</span>
+                  <span className="text-sm text-gray-600">{formatDate(item.available_till)}</span>
                 </div>
 
                 {/* Best Before Line (if available) */}
-                {item.bestBefore && (
+                {item.best_before && (
                   <div className="flex items-center">
                     <span className="text-sm font-medium text-gray-700 w-24">Best Before:</span>
-                    <span className="text-sm text-gray-600">{formatDate(item.bestBefore)}</span>
-                  </div>
-                )}
-
-                {/* Images Section (if available) */}
-                {item.images && item.images.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Images</h4>
-                    <div className="grid grid-cols-3 gap-4">
-                      {item.images.map((image, index) => (
-                        <img
-                          key={index}
-                          src={URL.createObjectURL(image)}
-                          alt={`Item ${index + 1}`}
-                          className="rounded-lg w-full h-24 object-cover"
-                        />
-                      ))}
-                    </div>
+                    <span className="text-sm text-gray-600">{formatDate(item.best_before)}</span>
                   </div>
                 )}
 
                 {/* Pick Up Button */}
-                {item.status === 'Reserved' && (
+                {item.is_reserved && !item.is_picked_up && (
                   <div className="flex justify-end mt-4">
                     <button
-                      onClick={() => onPickup?.(item.id)}
+                      onClick={() => handlePickup(item.id)}
                       className="button-base bg-sky-500 hover:bg-sky-600"
                     >
-                      Collected
+                      Mark As Collected
                     </button>
                   </div>
                 )}
@@ -160,6 +197,27 @@ const OrganisationHistory = ({ donations, categories, onPickup }) => {
             </div>
           ))
         )}
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          className="px-4 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-l"
+          disabled={currentPage === 1}
+        >
+          Previous
+        </button>
+        <span className="px-4 py-2 text-sm text-gray-700">
+          Page {currentPage} of {donations.reserved_items.total_pages}
+        </span>
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          className="px-4 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-r"
+          disabled={currentPage === donations.reserved_items.total_pages}
+        >
+          Next
+        </button>
       </div>
     </div>
   );
