@@ -77,6 +77,7 @@ class Item(models.Model):
     volume = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     volume_unit = models.CharField(max_length=50, blank=True, null=True)
     best_before = models.DateField(blank=True, null=True)
+    image = models.ImageField(upload_to='item_images/', blank=True, null=True)
     pickup_location = gis_models.PointField()
 
     posted_by = models.ForeignKey(

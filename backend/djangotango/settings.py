@@ -148,3 +148,6 @@ JWT_EXPIRATION_DELTA = timedelta(days=JWT_EXPIRATION_DAYS)
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL','redis://redis:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND','redis://redis:6379/0')
 CELERY_IMPORTS = ('api.tasks',)
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

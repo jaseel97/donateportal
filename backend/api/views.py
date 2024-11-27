@@ -14,6 +14,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
 from django.db import transaction
+from django.conf import settings
 
 from api.jwt import generate_jwt_token, token_required
 from api.validation import validate_category, validate_coordinates, validate_organization_data, validate_samaritan_data
@@ -351,6 +352,19 @@ def get_categories(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
+def save_item_image(item, image_file):
+    _, ext = os.path.splitext(image_file.name)
+    filename = f'item_{item.id}{ext}'
+    relative_path = os.path.join('item_images', filename)
+    full_path = os.path.join(settings.MEDIA_ROOT, 'item_images', filename)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+    with open(full_path, 'wb+') as destination:
+        for chunk in image_file.chunks():
+            destination.write(chunk)
+            
+    return relative_path
+
+@csrf_exempt
 @token_required()
 def donate_item(request):
     if request.method != 'POST':
@@ -364,12 +378,16 @@ def donate_item(request):
         }, status=403)
     
     try:
+
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.POST.get('data', '{}'))
         except json.JSONDecodeError:
             return JsonResponse({
-                "error": "Invalid JSON format"
+                "error": "Invalid JSON format in data field"
             }, status=400)
+                
+
+        image_file = request.FILES.get('image')
         
         required_fields = ['category', 'description', 'pickup_location']
         missing_fields = [field for field in required_fields if field not in data]
@@ -426,7 +444,6 @@ def donate_item(request):
                     "error": "Invalid best_before date format. Use YYYY-MM-DD"
                 }, status=400)
 
-
         pickup_window_start = data.get('pickup_window_start')
         pickup_window_end = data.get('pickup_window_end')
         
@@ -471,14 +488,15 @@ def donate_item(request):
                 "error": "Samaritan not found"
             }, status=404)
         
+
         item = Item.objects.create(
             category=category,
             description=data['description'],
             pickup_location=pickup_location,
             posted_by=samaritan,
-            weight=weight if 'weight' in data else None,
+            weight=weight if weight is not None else None,
             weight_unit=data.get('weight_unit'),
-            volume=volume if 'volume' in data else None,
+            volume=volume if volume is not None else None,
             volume_unit=data.get('volume_unit'),
             best_before=best_before if best_before else None,
             pickup_window_start=pickup_window_start if pickup_window_start else None,
@@ -486,12 +504,22 @@ def donate_item(request):
             available_till=available_till if available_till else None
         )
 
-        print("ITEM AVAILABLE TILL : ", item.available_till)
+        if image_file:
+            try:
+                relative_path = save_item_image(item, image_file)
+                item.image = relative_path
+                item.save()
+            except Exception as e:
+                item.delete()
+                return JsonResponse({
+                    "error": f"Failed to save image: {str(e)}"
+                }, status=500)
 
-        make_inactive.apply_async(
-            (item.id,), 
-            countdown=(item.available_till-datetime.now(timezone.utc)).total_seconds()
-        )
+        if item.available_till:
+            make_inactive.apply_async(
+                (item.id,), 
+                countdown=(item.available_till-datetime.now(timezone.utc)).total_seconds()
+            )
         
         return JsonResponse({
             "message": "Item donated successfully",
@@ -525,7 +553,8 @@ def donate_item(request):
                 "is_active": item.is_active,
                 "is_reserved": item.is_reserved,
                 "is_picked_up": item.is_picked_up,
-                "created_at": item.created_at.isoformat() if hasattr(item, 'created_at') else None
+                "created_at": item.created_at.isoformat() if hasattr(item, 'created_at') else None,
+                "image_url": item.image.url if item.image else None
             }
         }, status=201)
         
@@ -634,7 +663,8 @@ def browse_item_listings(request):
                     },
                     'pickup_window_start': item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
                     'pickup_window_end': item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
-                    'available_till': item.available_till.isoformat() if item.available_till else None
+                    'available_till': item.available_till.isoformat() if item.available_till else None,
+                    'image_url': item.image.url if item.image else None
                 }
                 
                 if item.weight is not None:
@@ -760,7 +790,8 @@ def get_samaritan_items(request, username):
                     } if item.picked_up_by else None,
                     'pickup_window_start': item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
                     'pickup_window_end': item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
-                    'available_till': item.available_till.isoformat() if item.available_till else None
+                    'available_till': item.available_till.isoformat() if item.available_till else None,
+                    'image_url': item.image.url if item.image else None
                 }
 
                 if item.weight is not None:
@@ -903,7 +934,8 @@ def get_organization_items(request, username):
                 'is_picked_up': item.is_picked_up,
                 'pickup_window_start': item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
                 'pickup_window_end': item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
-                'available_till': item.available_till.isoformat() if item.available_till else None
+                'available_till': item.available_till.isoformat() if item.available_till else None,
+                'image_url': item.image.url if item.image else None
             }
 
             if item.weight is not None:
@@ -1007,7 +1039,8 @@ def reserve_item(request, item_id):
                     },
                     "pickup_window_start": item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
                     "pickup_window_end": item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
-                    "available_till": item.available_till.isoformat() if item.available_till else None
+                    "available_till": item.available_till.isoformat() if item.available_till else None,
+                    'image_url': item.image.url if item.image else None
                 }
             }, status=200)
             
@@ -1090,6 +1123,7 @@ def pickup_item(request, item_id):
                         "id": item.picked_up_by.id,
                         "username": item.picked_up_by.username
                     },
+                    'image_url': item.image.url if item.image else None
                     # "picked_up_at": item.picked_up_at.isoformat()
                 }
             }, status=200)
