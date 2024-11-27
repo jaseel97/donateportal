@@ -22,21 +22,21 @@ export default function SamaritanHome() {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-7xl bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
-      <div className="mx-auto p-6">
+    <div className="relative min-h-screen w-full max-w-7xl bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
+      <div className="mx-auto">
         <h1 className="text-3xl font-bold text-sky-900 text-center mb-8 animate-slideDown">
           Samaritan Donation Portal
         </h1>
         
-        <div className="flex gap-6 w-full mx-auto ">
-          <div className="flex-grow animate-slideInLeft hover:scale-[1.01] transition-transform duration-300 ">
+        <div className="flex flex-col md:flex-row gap-6 w-full mx-auto px-4">
+          <div className="md:flex-grow animate-slideInLeft hover:scale-[1.01] transition-transform duration-300">
             <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
               <DonationForm onSubmit={handleDonationSubmit} />
             </div>
           </div>
           
-          <div className="w-96 animate-slideInRight hover:scale-[1.02] transition-transform duration-300 bg-gradient-to-br from-indigo-50/90 to-white/90">
-            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
+          <div className="md:w-96 animate-slideInRight hover:scale-[1.02] transition-transform duration-300 bg-gradient-to-br from-indigo-50/90 to-white/90">
+            <div className="bg-white rounded-lg shadow-md p-2 hover:shadow-lg transition-shadow duration-300">
               <DonationHistory donations={donations} categories={categories} />
             </div>
           </div>
