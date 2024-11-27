@@ -8,6 +8,9 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      zIndex: {
+        '9999': '9999',
+      },
       keyframes: {
         slideIn: {
           '0%': { opacity: '0', transform: 'translateY(-10px)' },
