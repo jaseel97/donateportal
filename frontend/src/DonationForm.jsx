@@ -7,7 +7,7 @@ import DatePicker from './DatePicker';
 import UploadImage from './UploadImage';
 import Calendar from './Calendar';
 
-const DonationForm = ({ onSubmit }) => {
+const DonationForm = ({ onSubmit, onDonationSuccess }) => {
   const [formData, setFormData] = useState({
     category: '',
     categoryID: '',
@@ -94,6 +94,7 @@ const DonationForm = ({ onSubmit }) => {
       });
       console.log("Donation saved successfully:", response.data);
       onSubmit(response.data);
+      onDonationSuccess(); // Call the success callback to refresh history
       handleReset();
     } catch (error) {
       console.error("Error saving donation:", error);
@@ -117,8 +118,8 @@ const DonationForm = ({ onSubmit }) => {
   };
 
   return (
-    <div className="flex-1 w-full bg-white p-6 rounded-lg shadow-sm">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="flex-1 w-full bg-white/90 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Add New Donation</h2>
           

@@ -107,13 +107,12 @@ const DonationCard = React.memo(({ item, onClick, formatDate }) => {
   );
 });
 
-const DonationHistory = () => {
+const DonationHistory = ({ refreshTrigger }) => {
   const [donations, setDonations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
   const fetchDonations = useCallback(async (page) => {
@@ -131,7 +130,6 @@ const DonationHistory = () => {
       });
       const { active_items } = response.data;
       setDonations(active_items.items || []);
-      setTotalPages(active_items.total_pages || 1);
     } catch (error) {
       console.error('Error fetching donations:', error);
     } finally {
@@ -141,7 +139,7 @@ const DonationHistory = () => {
 
   useEffect(() => {
     fetchDonations(currentPage);
-  }, [currentPage, fetchDonations]);
+  }, [currentPage, fetchDonations, refreshTrigger]);
 
   const formatDate = useCallback((date) => {
     if (!date) return 'Date not available';
