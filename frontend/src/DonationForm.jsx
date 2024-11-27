@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from "axios";
 import { apiDomain } from "./Config";
 import { PhotoIcon } from '@heroicons/react/24/solid';
@@ -8,7 +8,6 @@ import UploadImage from './UploadImage';
 import Calendar from './Calendar';
 
 const DonationForm = ({ onSubmit }) => {
-  const [categories, setCategories] = useState({});
   const [formData, setFormData] = useState({
     category: '',
     categoryID: '',
@@ -20,23 +19,8 @@ const DonationForm = ({ onSubmit }) => {
     pickupWindowStart: '09:00',
     pickupWindowEnd: '17:00',
     availableTill: '',
-    pickupLocation: '', // Added to match the form field
+    pickupLocation: '',
   });
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(`${apiDomain}/categories`, {
-          withCredentials: true
-        });
-        setCategories(response.data);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
-    };
-
-    fetchCategories();
-  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -143,12 +127,11 @@ const DonationForm = ({ onSubmit }) => {
               id={formData.categoryID}
               value={formData.category}
               onChange={handleCategoryChange}
-              categories={categories}
               required
             />
             <div className="mb-6">
               <label htmlFor="availableTill" className="categorylabel">
-              Available Till*
+                Available Till*
               </label>
               <DatePicker
                 name="availableTill"

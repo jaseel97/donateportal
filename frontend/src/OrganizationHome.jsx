@@ -3,7 +3,8 @@ import axios from "axios";
 import { apiDomain } from "./Config";
 import OrganisationHistory from './OrganisationHistory';
 import Modal from './Modal';
-import { XMarkIcon } from '@heroicons/react/24/solid';
+import Category from './Category';
+import ProximityDropdown from './ProximityDropdown';
 
 function OrganizationHome() {
     const [filter, setFilter] = useState("");
@@ -47,7 +48,7 @@ function OrganizationHome() {
     ];
 
     const formatReadableDate = (isoDateString) => {
-        if (!isoDateString) return ""; // Handle null or undefined
+        if (!isoDateString) return ""; 
         return new Date(isoDateString).toLocaleDateString("en-US", {
             year: "numeric",
             month: "long",
@@ -55,20 +56,16 @@ function OrganizationHome() {
         });
     };
 
-    useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await axios.get(`${apiDomain}/categories`, {
-                    withCredentials: true
-                });
-                setCategories(response.data.options);
-            } catch (error) {
-                console.error("Error fetching categories:", error);
-            }
-        };
-
-        fetchCategories();
-    }, []);
+    const fetchCategories = async () => {
+        try {
+            const response = await axios.get(`${apiDomain}/categories`, {
+                withCredentials: true
+            });
+            setCategories(response.data);
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+        }
+    };
 
     const fetchItems = async (page = 1, perPage = 9, radius = "", category = "") => {
         try {
@@ -98,7 +95,7 @@ function OrganizationHome() {
                 pickupEnd: item?.pickup_window_end,
                 availableTill: formatReadableDate(item?.available_till),
                 distanceKm: item?.distance_km,
-                bestBefore:formatReadableDate(item?.best_before)
+                bestBefore: formatReadableDate(item?.best_before)
             }));
 
             setItems(mappedItems);
@@ -109,6 +106,10 @@ function OrganizationHome() {
     };
 
     useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    useEffect(() => {
         const selectedCategory = filter === "" ? "" : filter;
         fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
     }, [currentPage, itemsPerPage, proximityFilter, filter]);
@@ -117,6 +118,10 @@ function OrganizationHome() {
         if (newPage >= 1 && newPage <= totalPages) {
             setCurrentPage(newPage);
         }
+    };
+
+    const handleCategoryChange = (e) => {
+        setFilter(e.target.id || "");
     };
 
     const filteredItems = items.filter((item) => {
@@ -138,6 +143,11 @@ function OrganizationHome() {
         setModalOpen(false);
     };
 
+    const handleReservationSuccess = () => {
+        const selectedCategory = filter === "" ? "" : filter;
+        fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-rose-50 via-sky-50 to-indigo-50 animate-fadeIn">
             <div className="max-w-7xl mx-auto p-6">
@@ -149,24 +159,13 @@ function OrganizationHome() {
                     <div className="flex-grow animate-slideInLeft">
                         <div className="bg-white/90 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300">
                             {/* Filter Section */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                                 {/* Category Filter */}
                                 <div className="flex flex-col">
-                                    <label className="categorylabel">
-                                        Filter by Category:
-                                    </label>
-                                    <select
-                                        value={filter}
-                                        onChange={(e) => setFilter(e.target.value)}
-                                        className="categorystyle"
-                                    >
-                                        <option value="">All</option>
-                                        {Object.keys(categories).map((categoryId) => (
-                                            <option key={categoryId} value={categoryId}>
-                                                {categories[categoryId]}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <Category
+                                        value={filter ? categories.options?.[filter] : ""}
+                                        onChange={handleCategoryChange}
+                                    />
                                 </div>
 
                                 {/* Search Input */}
@@ -185,20 +184,10 @@ function OrganizationHome() {
 
                                 {/* Proximity Filter */}
                                 <div className="flex flex-col">
-                                    <label className="categorylabel">
-                                        Filter by Proximity:
-                                    </label>
-                                    <select
+                                    <ProximityDropdown
                                         value={proximityFilter}
                                         onChange={(e) => setProximityFilter(e.target.value)}
-                                        className="categorystyle"
-                                    >
-                                        {proximityOptions.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
                             </div>
 
@@ -215,7 +204,7 @@ function OrganizationHome() {
                                     >
                                         <h3 className="font-bold text-lg text-sky-800 mb-2">{item.description}</h3>
                                         <p className="text-sm text-gray-600">
-                                            <strong>Category:</strong> {categories[item.category] || "Unknown"}
+                                            <strong>Category:</strong> {categories.options?.[item.category] || "Unknown"}
                                         </p>
                                         <p className="text-sm text-gray-600">
                                             <strong>Distance:</strong> {item.distanceKm} Km
@@ -272,7 +261,8 @@ function OrganizationHome() {
                         isOpen={isModalOpen}
                         onClose={closeModal}
                         selectedItem={selectedItem}
-                        categories={categories}
+                        categories={categories.options}
+                        onReserve={handleReservationSuccess}
                     />
                 )}
                 <footer className="mt-12 text-center text-sky-600 text-sm animate-slideUp">

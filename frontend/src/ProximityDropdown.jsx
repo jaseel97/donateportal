@@ -1,27 +1,18 @@
+// ProximityDropdown.jsx
 import React from 'react';
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/24/solid';
-import axios from "axios";
-import { apiDomain } from "./Config";
 
-const Category = ({ value, onChange }) => {
+const ProximityDropdown = ({ value, onChange }) => {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [categories, setCategories] = React.useState({});
   const dropdownRef = React.useRef(null);
 
-  React.useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(`${apiDomain}/categories`, {
-          withCredentials: true
-        });
-        setCategories(response.data);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
-    };
-
-    fetchCategories();
-  }, []);
+  const proximityOptions = [
+    { label: "All", value: "" },
+    { label: "5 km", value: 5 },
+    { label: "10 km", value: 10 },
+    { label: "20 km", value: 20 },
+    { label: "50 km", value: 50 },
+  ];
 
   React.useEffect(() => {
     const handleClickOutside = (event) => {
@@ -33,9 +24,14 @@ const Category = ({ value, onChange }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const getDisplayValue = () => {
+    if (!value) return "All";
+    return `${value} km`;
+  };
+
   return (
     <div className="mb-6">
-      <label className="categorylabel">Category*</label>
+      <label className="categorylabel">Filter by Proximity:</label>
       <div className="relative" ref={dropdownRef}>
         <button
           type="button"
@@ -44,7 +40,7 @@ const Category = ({ value, onChange }) => {
         >
           <div className="flex items-center">
             <span className="block truncate min-w-[200px]">
-              {value || "Select a category"}
+              {getDisplayValue()}
             </span>
           </div>
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
@@ -55,26 +51,26 @@ const Category = ({ value, onChange }) => {
           </span>
         </button>
 
-        {isOpen && categories.options && (
+        {isOpen && (
           <ul className="categorylist">
-            {Object.entries(categories.options).map(([key, categoryValue]) => (
+            {proximityOptions.map((option) => (
               <li
-                key={key}
+                key={option.value}
                 className={`categoryitem ${
-                  value === categoryValue ? 'categoryitem-selected' : ''
+                  value === option.value ? 'categoryitem-selected' : ''
                 }`}
                 onClick={() => {
-                  onChange({ target: { name: 'category', id: key, value: categoryValue } });
+                  onChange({ target: { value: option.value } });
                   setIsOpen(false);
                 }}
               >
                 <div className="flex items-center">
                   <span className={`categoryitem-text ${
-                      value === categoryValue ? 'categoryitem-text-selected' : ''
-                    }`}>
-                    {categoryValue}
+                    value === option.value ? 'categoryitem-text-selected' : ''
+                  }`}>
+                    {option.label}
                   </span>
-                  {value === categoryValue && (
+                  {value === option.value && (
                     <span className="category-checkicon">
                       <CheckIcon className="checkicon" />
                     </span>
@@ -89,4 +85,4 @@ const Category = ({ value, onChange }) => {
   );
 };
 
-export default Category;
+export default ProximityDropdown;
