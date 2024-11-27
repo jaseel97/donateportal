@@ -16,7 +16,6 @@ const Calendar = ({ value, onChange, name = "date" }) => {
       hover:bg-gradient-to-r hover:from-white/90 hover:to-indigo-50/90 hover:border-indigo-300 
       hover:scale-[1.01] hover:shadow-md focus:border-sky-500 
       transition-all duration-300 rounded-t-lg"
-      required
     />
   );
 };

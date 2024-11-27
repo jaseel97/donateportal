@@ -148,7 +148,7 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const requiredFields = ['categoryID', 'about', 'bestBefore', 'availableTill', 'pickupLocation'];
+    const requiredFields = ['categoryID', 'about', 'availableTill', 'pickupLocation'];
     const missingFields = requiredFields.filter(field => !formData[field]);
 
     if (missingFields.length > 0) {
@@ -172,7 +172,7 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
       weight_unit: "kg",
       volume: formData.volume || null,
       volume_unit: "m³",
-      best_before: new Date(formData.bestBefore).toISOString().split('T')[0],
+      best_before: formData.bestBefore ? new Date(formData.bestBefore).toISOString().split('T')[0] : null,
       pickup_window_start: formData.pickupWindowStart,
       pickup_window_end: formData.pickupWindowEnd,
       available_till: convertToISO(formData.availableTill)
@@ -291,13 +291,12 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
             </div>
             <div className="mb-6">
               <label htmlFor="bestBefore" className="categorylabel">
-                Best Before*
+                Best Before
               </label>
               <Calendar
                 name="bestBefore"
                 value={formData.bestBefore}
                 onChange={handleInputChange}
-                required
               />
             </div>
           </div>
