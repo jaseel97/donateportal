@@ -24,19 +24,19 @@ const Signup = () => {
         }
     });
     const canadianProvinces = [
-        "Alberta",
-        "British Columbia",
-        "Manitoba",
-        "New Brunswick",
-        "Newfoundland and Labrador",
-        "Nova Scotia",
-        "Ontario",
-        "Prince Edward Island",
-        "Quebec",
-        "Saskatchewan",
-        "Northwest Territories",
-        "Nunavut",
-        "Yukon"
+        "AB",
+        "BC",
+        "MB",
+        "NB",
+        "NL",
+        "NS",
+        "ON",
+        "PE",
+        "QC",
+        "SK",
+        "NW",
+        "NU",
+        "YT"
     ];
     const [message, setMessage] = useState('');
     //const [isFlipped, setIsFlipped] = useState(false);
@@ -52,7 +52,7 @@ const Signup = () => {
     useEffect(() => {
         // console.log(process.env.REACT_APP_GOOGLE_MAPS_API_KEY)
         // const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-        const mapsKey = 'AIzaSyAQb8A0cRrWKqVwEl8cACxfeykZtBxmp8A';    
+        const mapsKey = 'AIzaSyAQb8A0cRrWKqVwEl8cACxfeykZtBxmp8A';
         const loader = new Loader({
             apiKey: mapsKey,
             version: 'weekly',
@@ -97,7 +97,7 @@ const Signup = () => {
 
     const handleAddressChange = (e) => {
         const inputValue = e.target.value;
-    
+
         setFormData((prevState) => ({
             ...prevState,
             address: {
@@ -113,14 +113,14 @@ const Signup = () => {
                 longitude: null,           // Reset longitude
             },
         }));
-    
+
         // Fetch suggestions
         fetchSuggestions(inputValue);
     };
 
     const handleSuggestionSelect = (suggestion) => {
         if (!placesService) return;
-    
+
         placesService.getDetails(
             { placeId: suggestion.place_id },
             (place, status) => {
@@ -131,10 +131,10 @@ const Signup = () => {
                     let extractedStreetNumber = '';
                     let extractedStreetName = '';
                     let extractedPostalCode = '';
-    
+
                     place.address_components.forEach((component) => {
                         const componentType = component.types[0];
-    
+
                         switch (componentType) {
                             case 'street_number':
                                 extractedStreetNumber = component.long_name;
@@ -155,10 +155,10 @@ const Signup = () => {
                                 break;
                         }
                     });
-    
+
                     // Construct full address
                     const fullAddress = `${extractedStreetNumber} ${extractedStreetName}`;
-    
+
                     // Set state values
                     setFormData((prevState) => ({
                         ...prevState,
@@ -175,7 +175,7 @@ const Signup = () => {
                             longitude: place.geometry.location.lng(),
                         },
                     }));
-    
+
                     // Clear suggestions
                     setSuggestions([]);
                 }
@@ -185,22 +185,22 @@ const Signup = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-    
+
         // Handle nested fields dynamically
         if (name.includes('.')) {
             const keys = name.split('.');
             setFormData((prevState) => {
                 const updatedData = { ...prevState };
                 let pointer = updatedData;
-    
+
                 // Traverse the nested structure except for the last key
                 for (let i = 0; i < keys.length - 1; i++) {
                     pointer = pointer[keys[i]];
                 }
-    
+
                 // Update the last key
                 pointer[keys[keys.length - 1]] = value;
-    
+
                 return updatedData;
             });
         } else {
@@ -296,14 +296,14 @@ const Signup = () => {
                             }`}
                         onClick={() => setActiveForm('samaritan')}
                     >
-                        Samaritan Signup
+                        Samaritan
                     </button>
                     <button
                         className={`px-4 py-2 rounded-lg ${activeForm === 'organization' ? 'bg-blue-600 text-white' : 'bg-gray-200'
                             }`}
                         onClick={() => setActiveForm('organization')}
                     >
-                        Organization Signup
+                        Organization
                     </button>
                 </div>
 
@@ -398,6 +398,20 @@ const Signup = () => {
                             >
                                 Sign Up
                             </button>
+
+{/* Already have an account? */}
+<div className="mt-4 text-center">
+    <p className="text-gray-600 text-sm">
+        Already have an account?{' '}
+        <span
+            onClick={() => navigate('/login')} // Adjust the path to match your login route
+            className="text-blue-600 font-semibold cursor-pointer hover:underline"
+        >
+            Login
+        </span>
+    </p>
+</div>
+
                         </form>
                         {message && (
                             <p
@@ -495,19 +509,19 @@ const Signup = () => {
                                         className="mt-2 w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-700 sm:text-sm bg-blue-50"
                                         required
                                     />
-                                                    {suggestions.length > 0 && (
-                  <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
-                    {suggestions.map((suggestion) => (
-                      <li 
-                        key={suggestion.place_id}
-                        onClick={() => handleSuggestionSelect(suggestion)}
-                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
-                      >
-                        {suggestion.description}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                                    {suggestions.length > 0 && (
+                                        <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 shadow-lg max-h-60 overflow-y-auto">
+                                            {suggestions.map((suggestion) => (
+                                                <li
+                                                    key={suggestion.place_id}
+                                                    onClick={() => handleSuggestionSelect(suggestion)}
+                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                                                >
+                                                    {suggestion.description}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </div>
                             </div>
 
@@ -589,6 +603,22 @@ const Signup = () => {
                             </div>
                         </form>
 
+
+{/* Already have an account? */}
+<div className="mt-4 text-center">
+    <p className="text-gray-600 text-sm">
+        Already have an account?{' '}
+        <span
+            onClick={() => navigate('/login')} // Adjust the path to match your login route
+            className="text-blue-600 font-semibold cursor-pointer hover:underline"
+        >
+            Login
+        </span>
+    </p>
+</div>
+
+
+
                         {message && (
                             <p
                                 className={`mt-4 text-center ${message.includes('successful') ? 'text-green-600' : 'text-red-600'
@@ -597,6 +627,7 @@ const Signup = () => {
                                 {message}
                             </p>
                         )}
+
                     </div>
                 )}
 

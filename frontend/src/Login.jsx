@@ -200,25 +200,30 @@ const Login = () => {
 
                 {/* Back Side: About App */}
                 <div
-                    className={`absolute w-full h-full backface-hidden rotate-y-180 ${isFlipped ? "flex" : "hidden"
-                        } flex-col items-center justify-center p-8`}
-                >
-                    <h1 className="text-3xl font-extrabold text-blue-600 mb-6 text-center">
-                        About Samaritan Connect
-                    </h1>
-                    <p className="text-center text-gray-700">
-                        This app helps you connect, share, and grow. Explore all
-                        the features tailored to provide the best user
-                        experience. Login or sign up to get started!
-                    </p>
-                    <button
-                        onClick={handleFlip}
-                        className="absolute top-4 left-4 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-800 transition duration-300 shadow-lg"
-                        title="Flip to Login"
-                    >
-                        🔄
-                    </button>
-                </div>
+  className={`absolute w-full h-full backface-hidden rotate-y-180 ${isFlipped ? "flex" : "hidden"
+    } flex-col items-center justify-center p-8 bg-gray-50 rounded-lg shadow-lg`}
+>
+  <h1 className="text-4xl font-extrabold text-blue-600 mb-6 text-center">
+    About Samaritan Connect
+  </h1>
+  <p className="text-center text-gray-700 leading-relaxed">
+    Every year, millions of essential items like food, clothing, and electronics go to waste, while countless individuals struggle to access these resources.  
+    <br /><br />
+    Samaritan Connect aims to change this by providing an all-in-one platform where donors can easily list surplus items, and NGOs can efficiently find and distribute them to those in need.  
+    <br /><br />
+    With features like location-based searches, real-time tracking, and seamless donation management, Samaritan Connect simplifies the act of giving, ensuring surplus resources reach the right hands.  
+    <br /><br />
+    Aligned with Sustainable Development Goal 12: Responsible Consumption and Production, our mission is to reduce waste, support vulnerable communities, and foster a culture of generosity that benefits both people and the planet.
+  </p>
+  <button
+    onClick={handleFlip}
+    className="absolute top-4 left-4 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-800 transition duration-300 shadow-lg"
+    title="Flip to Login"
+  >
+    🔄
+  </button>
+</div>
+
             </div>
         </div>
     );
