@@ -12,6 +12,10 @@ def generate_jwt_token(input):
         'user_type':input['user_type'],
         'exp': datetime.now(timezone.utc) + settings.JWT_EXPIRATION_DELTA
     }
+    if input['user_type'] in ['Organization', 'organization']:
+        payload['latitude'] = input['latitude'][0]
+        payload['longitude'] = input['longitude']
+    print("PAYLOAD : ", payload)
     return jwt.encode(payload, settings.JWT_SECRET, algorithm='HS256')
 
 def token_required(allowed_user_types=None):

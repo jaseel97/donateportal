@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from "axios";
 import { apiDomain } from "./Config";
-import { PhotoIcon } from '@heroicons/react/24/solid';
 import Category from './Category';
 import DatePicker from './DatePicker';
-import UploadImage from './UploadImage';
 import Calendar from './Calendar';
+import UploadImage from './UploadImage';
 import { Loader } from "@googlemaps/js-api-loader";
 
 const DonationForm = ({ onSubmit, onDonationSuccess }) => {
@@ -13,7 +12,7 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
     category: '',
     categoryID: '',
     about: '',
-    images: [],
+    image: null,
     weight: '',
     volume: '',
     bestBefore: '',
@@ -31,6 +30,16 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const [placesService, setPlacesService] = useState(null);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData(prev => ({
+        ...prev,
+        image: file
+      }));
+    }
+  };
 
   // Load Google Maps API
   useEffect(() => {
@@ -127,14 +136,6 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
     }));
   };
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    setFormData(prev => ({
-      ...prev,
-      images: files
-    }));
-  };
-
   const convertToISO = (input) => {
     const [datePart, startTime] = input.split(' ');
     const [year, month, day] = datePart.split('-').map(Number);
@@ -154,6 +155,12 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
     if (missingFields.length > 0) {
       alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
       return;
+    }
+
+    const submitFormData = new FormData();
+    
+    if (formData.image) {
+      submitFormData.append('image', formData.image);
     }
 
     if (!formData.coordinates.latitude || !formData.coordinates.longitude) {
@@ -178,19 +185,23 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
       available_till: convertToISO(formData.availableTill)
     };
 
+    submitFormData.append('data', JSON.stringify(postData));
+
     try {
-      const response = await axios.post(`${apiDomain}/samaritan/donate`, postData, {
+      const response = await axios.post(`${apiDomain}/samaritan/donate`, submitFormData, {
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'multipart/form-data',
         },
         withCredentials: true
       });
+      
       console.log("Donation saved successfully:", response.data);
       onSubmit(response.data);
-      onDonationSuccess(); // Call the success callback to refresh history
+      onDonationSuccess();
       handleReset();
     } catch (error) {
       console.error("Error saving donation:", error);
+      alert(error.response?.data?.error || "Error saving donation");
     }
   };
 
@@ -199,7 +210,7 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
       categoryID: '',
       category: '',
       about: '',
-      images: [],
+      image: null,
       weight: '',
       volume: '',
       bestBefore: '',
@@ -331,8 +342,9 @@ const DonationForm = ({ onSubmit, onDonationSuccess }) => {
           </div>
 
           <UploadImage
-            images={formData.images}
+            image={formData.image}
             onChange={handleImageChange}
+            setFormData={setFormData}
           />
         </div>
 

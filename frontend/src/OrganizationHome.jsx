@@ -7,6 +7,7 @@ import Category from './Category';
 import ProximityDropdown from './ProximityDropdown';
 import { useLocation } from 'react-router-dom';
 import UsernameAva from "./UsernameAva";
+import { MapPinIcon } from "@heroicons/react/24/solid";
 
 function OrganizationHome() {
     const [filter, setFilter] = useState("");
@@ -45,7 +46,7 @@ function OrganizationHome() {
     const location = useLocation();
     const { username } = location.state || {}; 
 
-    console.log("User name from Organization Home Page:", username);
+    // console.log("User name from Organization Home Page:", username);
 
     const formatReadableDate = (isoDateString) => {
         if (!isoDateString) return ""; 
@@ -95,13 +96,49 @@ function OrganizationHome() {
                 pickupEnd: item?.pickup_window_end,
                 availableTill: formatReadableDate(item?.available_till),
                 distanceKm: item?.distance_km,
-                bestBefore: formatReadableDate(item?.best_before)
+                bestBefore: formatReadableDate(item?.best_before),
+                image_url: item?.image_url
             }));
 
             setItems(mappedItems);
             setTotalPages(response.data.total_pages);
         } catch (error) {
             console.error("Error fetching items:", error);
+        }
+    };
+
+    const handleDirectionsClick = (e, item) => {
+        e.stopPropagation(); // Prevent the card's onClick from triggering
+        
+        // Extract coordinates from the POINT string
+        const coordinatesMatch = item.pickupLocation.match(/POINT \((.*?) (.*?)\)/);
+        
+        if (coordinatesMatch) {
+            const [_, pickup_longitude, pickup_latitude] = coordinatesMatch;
+            
+            // Get the JWT cookie
+            const jwt = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('jwt='))
+                ?.split('=')[1];
+                
+            if (!jwt) {
+                console.error('JWT cookie not found');
+                return;
+            }
+            
+            try {
+                const payload = JSON.parse(atob(jwt.split('.')[1]));
+                const { latitude: dest_latitude, longitude: dest_longitude } = payload;
+                
+                const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${dest_latitude},${dest_longitude}&destination=${pickup_latitude},${pickup_longitude}`;
+
+                window.open(directionsUrl, '_blank');
+            } catch (error) {
+                console.error('Error processing coordinates:', error);
+            }
+        } else {
+            console.error('Invalid pickup location format');
         }
     };
 
@@ -154,7 +191,7 @@ function OrganizationHome() {
             <div className="max-w-7xl mx-auto p-6">
             <div className="flex justify-center items-center mb-8 relative">
           <h1 className="text-3xl font-bold text-sky-900 animate-slideDown">
-            Samaritan Portal
+            Organization Home
           </h1>
           <div className="absolute right-0 top-1/2 -translate-y-1/2">
             <UsernameAva username={username} />
@@ -196,27 +233,37 @@ function OrganizationHome() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                                 {filteredItems.map((item) => (
                                     <div
-                                        key={item.id}
-                                        onClick={() => openModal(item)}
-                                        className="border-2 border-indigo-200 rounded-lg p-4 bg-white/85 
-                                                 hover:bg-gradient-to-r hover:from-white/90 hover:to-indigo-50/90 
-                                                 hover:border-indigo-300 hover:scale-[1.01] hover:shadow-md 
-                                                 transition-all duration-300 cursor-pointer"
-                                    >
-                                        <h3 className="font-bold text-lg text-sky-800 mb-2">{item.description}</h3>
-                                        <p className="text-sm text-gray-600">
-                                            <strong>Category:</strong> {categories.options?.[item.category] || "Unknown"}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            <strong>Distance:</strong> {item.distanceKm} Km
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            <strong>Pickup Window:</strong> {item.pickupStart} - {item.pickupEnd}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            <strong>Available Till:</strong> {item.availableTill}
-                                        </p>
+                                    key={item.id}
+                                    onClick={() => openModal(item)}
+                                    className="relative border-2 border-indigo-200 rounded-lg p-4 bg-white/85 
+                                             hover:bg-gradient-to-r hover:from-white/90 hover:to-indigo-50/90 
+                                             hover:border-indigo-300 hover:scale-[1.01] hover:shadow-md 
+                                             transition-all duration-300 cursor-pointer"
+                                >
+                                    <div className="absolute top-4 right-4">
+                                        <button
+                                            onClick={(e) => handleDirectionsClick(e, item)}
+                                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                                        >
+                                            <MapPinIcon className="h-5 w-5 text-sky-600 hover:text-sky-800 transform hover:scale-110 transition-all duration-300 hover:drop-shadow-md cursor-pointer" />
+                                        </button>
                                     </div>
+                                    <h3 className="font-bold text-lg text-sky-800 mb-2 pr-12 truncate">
+                                        {item.description}
+                                    </h3>
+                                    <p className="text-sm text-gray-600">
+                                        <strong>Category:</strong> {categories.options?.[item.category] || "Unknown"}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                        <strong>Distance:</strong> {item.distanceKm} Km
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                        <strong>Pickup Window:</strong> {item.pickupStart} - {item.pickupEnd}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                        <strong>Available Till:</strong> {item.availableTill}
+                                    </p>
+                                </div>
                                 ))}
                             </div>
 
@@ -252,6 +299,10 @@ function OrganizationHome() {
                             categories={categories}
                             refreshTrigger={historyRefreshTrigger}
                             username={username}
+                            onHistoryChange={() => {
+                                const selectedCategory = filter === "" ? "" : filter;
+                                fetchItems(currentPage, itemsPerPage, proximityFilter, selectedCategory);
+                            }}
                         />
                     </div>
                 </div>

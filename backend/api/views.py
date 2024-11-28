@@ -14,6 +14,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login, logout
 from django.db import transaction
+from django.conf import settings
 
 from api.jwt import generate_jwt_token, token_required
 from api.validation import validate_category, validate_coordinates, validate_organization_data, validate_samaritan_data
@@ -90,28 +91,28 @@ def signup_organization(request):
         organization.set_password(user_data['password'])
         organization.save()
 
-        print("Testing...")
-        print(organization.username)
+        # print("Testing...")
+        # print(organization.username)
 
-        token = generate_jwt_token({
-            'username': organization.username,
-            'email': organization.email,
-            'is_staff': False,
-            'user_type': organization.user_type,
-        })
+        # token = generate_jwt_token({
+        #     'username': organization.username,
+        #     'email': organization.email,
+        #     'is_staff': False,
+        #     'user_type': organization.user_type,
+        # })
         #
         response = JsonResponse({
             'message': 'Sign up is successful',
         })
 
-        response.set_cookie(
-            key='jwt',
-            value=token,
-            httponly=True,
-            secure=False,
-            samesite='Lax',
-            max_age=24 * 60 * 60
-        )
+        # response.set_cookie(
+        #     key='jwt',
+        #     value=token,
+        #     httponly=True,
+        #     secure=False,
+        #     samesite='Lax',
+        #     max_age=24 * 60 * 60
+        # )
 
         return response
 
@@ -214,6 +215,11 @@ def login(request):
                 'is_staff': False,
                 'user_type': specific_user.user_type,
             }
+
+            if specific_user.user_type in ['Organization', 'organization']:
+                token_payload['latitude'] = specific_user.location.y,
+                token_payload['longitude'] = specific_user.location.x
+
             token = generate_jwt_token(token_payload)
             print("JWT token sent:", token)
             
@@ -257,87 +263,6 @@ def logout(request):
         print(f"Logout error: {str(e)}")
         return JsonResponse({'error': 'Logout failed'}, status=500)
 
-# @token_required
-# def change_password(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
-        
-#     data = json.loads(request.body)
-#     old_password = data.get('old_password')
-#     new_password = data.get('new_password')
-    
-#     try:
-#         user = User.objects.get(id=request.user_id)
-#         if user.check_password(old_password):
-#             user.set_password(new_password)
-#             user.save()
-#             return JsonResponse({'message': 'Password successfully changed'})
-#         else:
-#             return JsonResponse({'error': 'Current password is incorrect'}, status=400)
-#     except User.DoesNotExist:
-#         return JsonResponse({'error': 'User not found'}, status=404)
-
-# @token_required
-# def get_user_profile(request):
-#     if request.method != 'GET':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
-    
-#     return JsonResponse({
-#         'email': request.user_email,
-#         'is_admin': request.is_admin
-#     })
-
-# @csrf_exempt
-# def request_password_reset(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
-    
-#     data = json.loads(request.body)
-#     email = data.get('email')
-    
-#     try:
-#         user = User.objects.get(email=email)
-#         token = default_token_generator.make_token(user)
-#         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
-#         reset_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/reset-password/{uid}/{token}"
-#         send_mail(
-#             'Password Reset Request',
-#             f'Click the following link to reset your password: {reset_url}',
-#             settings.DEFAULT_FROM_EMAIL,
-#             [email],
-#             fail_silently=False,
-#         )
-#         return JsonResponse({'message': 'Password reset email sent'})
-#     except User.DoesNotExist:
-#         return JsonResponse({'error': 'User not found'}, status=404)
-
-# @csrf_exempt
-# def reset_password(request):
-#     if request.method != 'POST':
-#         return JsonResponse({'error': 'Invalid request method'}, status=400)
-    
-#     data = json.loads(request.body)
-#     password = data.get('password')
-#     token = data.get('token')
-#     uidb64 = data.get('uid')
-    
-#     try:
-#         uid = force_str(urlsafe_base64_decode(uidb64))
-#         user = User.objects.get(pk=uid)
-        
-#         if default_token_generator.check_token(user, token):
-#             user.set_password(password)
-#             user.save()
-#             return JsonResponse({'message': 'Password successfully reset'})
-#         else:
-#             return JsonResponse({'error': 'Invalid reset link'}, status=400)
-#     except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-#         return JsonResponse({'error': 'Invalid reset link'}, status=400)
-
-
-
-
 #------------------------------------------------- App Views -------------------------------------------------#
 @csrf_exempt
 @token_required()
@@ -349,6 +274,19 @@ def get_categories(request):
         })
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+@csrf_exempt
+def save_item_image(item, image_file):
+    _, ext = os.path.splitext(image_file.name)
+    filename = f'item_{item.id}{ext}'
+    relative_path = os.path.join('item_images', filename)
+    full_path = os.path.join(settings.MEDIA_ROOT, 'item_images', filename)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+    with open(full_path, 'wb+') as destination:
+        for chunk in image_file.chunks():
+            destination.write(chunk)
+            
+    return relative_path
 
 @csrf_exempt
 @token_required()
@@ -364,12 +302,16 @@ def donate_item(request):
         }, status=403)
     
     try:
+
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.POST.get('data', '{}'))
         except json.JSONDecodeError:
             return JsonResponse({
-                "error": "Invalid JSON format"
+                "error": "Invalid JSON format in data field"
             }, status=400)
+                
+
+        image_file = request.FILES.get('image')
         
         required_fields = ['category', 'description', 'pickup_location']
         missing_fields = [field for field in required_fields if field not in data]
@@ -426,7 +368,6 @@ def donate_item(request):
                     "error": "Invalid best_before date format. Use YYYY-MM-DD"
                 }, status=400)
 
-
         pickup_window_start = data.get('pickup_window_start')
         pickup_window_end = data.get('pickup_window_end')
         
@@ -471,14 +412,15 @@ def donate_item(request):
                 "error": "Samaritan not found"
             }, status=404)
         
+
         item = Item.objects.create(
             category=category,
             description=data['description'],
             pickup_location=pickup_location,
             posted_by=samaritan,
-            weight=weight if 'weight' in data else None,
+            weight=weight if weight is not None else None,
             weight_unit=data.get('weight_unit'),
-            volume=volume if 'volume' in data else None,
+            volume=volume if volume is not None else None,
             volume_unit=data.get('volume_unit'),
             best_before=best_before if best_before else None,
             pickup_window_start=pickup_window_start if pickup_window_start else None,
@@ -486,12 +428,22 @@ def donate_item(request):
             available_till=available_till if available_till else None
         )
 
-        print("ITEM AVAILABLE TILL : ", item.available_till)
+        if image_file:
+            try:
+                relative_path = save_item_image(item, image_file)
+                item.image = relative_path
+                item.save()
+            except Exception as e:
+                item.delete()
+                return JsonResponse({
+                    "error": f"Failed to save image: {str(e)}"
+                }, status=500)
 
-        make_inactive.apply_async(
-            (item.id,), 
-            countdown=(item.available_till-datetime.now(timezone.utc)).total_seconds()
-        )
+        if item.available_till:
+            make_inactive.apply_async(
+                (item.id,), 
+                countdown=(item.available_till-datetime.now(timezone.utc)).total_seconds()
+            )
         
         return JsonResponse({
             "message": "Item donated successfully",
@@ -525,7 +477,8 @@ def donate_item(request):
                 "is_active": item.is_active,
                 "is_reserved": item.is_reserved,
                 "is_picked_up": item.is_picked_up,
-                "created_at": item.created_at.isoformat() if hasattr(item, 'created_at') else None
+                "created_at": item.created_at.isoformat() if hasattr(item, 'created_at') else None,
+                "image_url": item.image.url if item.image else None
             }
         }, status=201)
         
@@ -591,11 +544,15 @@ def browse_item_listings(request):
             is_picked_up=False
         )
 
+        for item in queryset:
+            for field in item._meta.fields:
+                print(f"{field.name}: {getattr(item, field.name)}")
+            print("-" * 20)
         if category is not None and category != 0:
             queryset = queryset.filter(category=category)
         
         try:
-            queryset = Item.objects.filter(pickup_location__distance_lte=(organization.location, D(m=radius_m)))
+            queryset = queryset.filter(pickup_location__distance_lte=(organization.location, D(m=radius_m)))
 
             queryset = queryset.annotate(
                 distance=DistanceDBFunction('pickup_location', organization.location)
@@ -634,7 +591,8 @@ def browse_item_listings(request):
                     },
                     'pickup_window_start': item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
                     'pickup_window_end': item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
-                    'available_till': item.available_till.isoformat() if item.available_till else None
+                    'available_till': item.available_till.isoformat() if item.available_till else None,
+                    'image_url': item.image.url if item.image else None
                 }
                 
                 if item.weight is not None:
@@ -760,7 +718,8 @@ def get_samaritan_items(request, username):
                     } if item.picked_up_by else None,
                     'pickup_window_start': item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
                     'pickup_window_end': item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
-                    'available_till': item.available_till.isoformat() if item.available_till else None
+                    'available_till': item.available_till.isoformat() if item.available_till else None,
+                    'image_url': item.image.url if item.image else None
                 }
 
                 if item.weight is not None:
@@ -903,7 +862,8 @@ def get_organization_items(request, username):
                 'is_picked_up': item.is_picked_up,
                 'pickup_window_start': item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
                 'pickup_window_end': item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
-                'available_till': item.available_till.isoformat() if item.available_till else None
+                'available_till': item.available_till.isoformat() if item.available_till else None,
+                'image_url': item.image.url if item.image else None
             }
 
             if item.weight is not None:
@@ -1007,7 +967,74 @@ def reserve_item(request, item_id):
                     },
                     "pickup_window_start": item.pickup_window_start.strftime('%H:%M') if item.pickup_window_start else None,
                     "pickup_window_end": item.pickup_window_end.strftime('%H:%M') if item.pickup_window_end else None,
-                    "available_till": item.available_till.isoformat() if item.available_till else None
+                    "available_till": item.available_till.isoformat() if item.available_till else None,
+                    'image_url': item.image.url if item.image else None
+                }
+            }, status=200)
+            
+    except Exception as e:
+        return JsonResponse({"error": f"Internal server error: {str(e)}"}, status=500)
+
+@csrf_exempt
+@token_required()
+def unreserve_item(request, item_id):
+    """
+    Allow an organization to cancel their reservation of an item.
+    Only the organization that reserved the item can cancel the reservation.
+    """
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+        
+    if request.user_type != 'organization':
+        return JsonResponse({"error": "Only organizations can cancel reservations"}, status=403)
+        
+    try:
+        with transaction.atomic():
+            # Get and lock the item for update
+            try:
+                item = Item.objects.select_for_update().get(id=item_id)
+            except Item.DoesNotExist:
+                return JsonResponse({"error": "Item not found"}, status=404)
+            
+            # Validate item state
+            if not item.is_active:
+                return JsonResponse({"error": "Item is not active"}, status=400)
+                
+            if not item.is_reserved:
+                return JsonResponse({"error": "Item is not reserved"}, status=400)
+                
+            if item.is_picked_up:
+                return JsonResponse({"error": "Cannot unreserve an item that has been picked up"}, status=400)
+
+            try:
+                organization = Organization.objects.get(username=request.username)
+                # Check if this organization is the one that reserved it
+                if item.reserved_by != organization:
+                    return JsonResponse({
+                        "error": "Only the organization that reserved this item can cancel the reservation"
+                    }, status=403)
+            except Organization.DoesNotExist:
+                return JsonResponse({"error": "Organization not found"}, status=404)
+            
+            # Clear the reservation
+            item.is_reserved = False
+            item.reserved_by = None
+            item.save(update_fields=['is_reserved', 'reserved_by'])
+            
+            return JsonResponse({
+                "message": "Reservation cancelled successfully",
+                "item": {
+                    "id": item.id,
+                    "category": {
+                        "id": item.category,
+                        "name": dict(Item.CATEGORY_CHOICES)[item.category]
+                    },
+                    "description": item.description,
+                    "is_active": item.is_active,
+                    "is_reserved": item.is_reserved,
+                    "is_picked_up": item.is_picked_up,
+                    "reserved_by": None,
+                    'image_url': item.image.url if item.image else None
                 }
             }, status=200)
             
@@ -1090,6 +1117,7 @@ def pickup_item(request, item_id):
                         "id": item.picked_up_by.id,
                         "username": item.picked_up_by.username
                     },
+                    'image_url': item.image.url if item.image else None
                     # "picked_up_at": item.picked_up_at.isoformat()
                 }
             }, status=200)

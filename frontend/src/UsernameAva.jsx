@@ -1,6 +1,7 @@
 // UsernameAva.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiDomain } from './Config';
 
 const UsernameAva = ({ username }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -20,7 +21,7 @@ const UsernameAva = ({ username }) => {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('http://localhost:8080/auth/logout', {
+      const response = await fetch(`${apiDomain}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });

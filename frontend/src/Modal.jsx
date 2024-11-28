@@ -116,6 +116,21 @@ const Modal = ({
                                 </p>
                             </div>
 
+                            {selectedItem.image_url && (
+                                <div>
+                                    <h4 className="categorylabel">Image</h4>
+                                    <div className="mt-2 flex justify-center">
+                                        <div className="w-1/2">
+                                            <img 
+                                                src={`${apiDomain}${selectedItem.image_url}`}
+                                                alt={selectedItem.description}
+                                                className="w-full h-auto rounded-lg shadow-md"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div>
                                 <h4 className="categorylabel">Details</h4>
                                 <div className="mt-2 text-sm text-gray-500 space-y-1">
@@ -131,12 +146,12 @@ const Modal = ({
 
                             <div className="pt-4 border-t-2 border-indigo-200">
                                 <div className="flex justify-end space-x-3">
-                                    <button
+                                    {/* <button
                                         onClick={onClose}
                                         className="resetbutton"
                                     >
                                         Cancel
-                                    </button>
+                                    </button> */}
                                     <button
                                         onClick={handleReserve}
                                         className="submitbutton"
